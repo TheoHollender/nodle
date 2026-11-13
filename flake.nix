@@ -67,6 +67,9 @@
             valgrind
           ];
         };
+
+        # `nix develop .#ci`: minimal shell for CI linting
+        ci = pkgs.mkShell { packages = [ pkgs.clang-tools ]; };
       });
 
       formatter = forAllSystems (pkgs: pkgs.nixpkgs-fmt);

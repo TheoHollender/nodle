@@ -33,43 +33,43 @@ protected:
 };
 
 TEST_F(SourceFileTest, ConstructorStoresPathAndContent) {
-  SourceFile f("a.nodle", "let x = 1");
-  EXPECT_EQ(f.path(), std::filesystem::path("a.nodle"));
-  EXPECT_EQ(f.content(), "let x = 1");
+  SourceFile::Ptr f = SourceFile::from_string("a.nodle", "let x = 1");
+  EXPECT_EQ(f->path(), std::filesystem::path("a.nodle"));
+  EXPECT_EQ(f->content(), "let x = 1");
 }
 
 TEST_F(SourceFileTest, TextReturnsSubstring) {
-  SourceFile f("a.nodle", "hello world");
-  EXPECT_EQ(f.text(6, 5), "world");
-  EXPECT_EQ(f.text(0, 5), "hello");
+  SourceFile::Ptr f = SourceFile::from_string("a.nodle", "hello world");
+  EXPECT_EQ(f->text(6, 5), "world");
+  EXPECT_EQ(f->text(0, 5), "hello");
 }
 
 TEST_F(SourceFileTest, TextClampsLengthPastEnd) {
-  SourceFile f("a.nodle", "abc");
-  EXPECT_EQ(f.text(1, 100), "bc");
+  SourceFile::Ptr f = SourceFile::from_string("a.nodle", "abc");
+  EXPECT_EQ(f->text(1, 100), "bc");
 }
 
 TEST_F(SourceFileTest, TextThrowsWhenOffsetPastEnd) {
-  SourceFile f("a.nodle", "abc");
-  EXPECT_THROW(f.text(10, 1), std::out_of_range);
+  SourceFile::Ptr f = SourceFile::from_string("a.nodle", "abc");
+  EXPECT_THROW(f->text(10, 1), std::out_of_range);
 }
 
 TEST_F(SourceFileTest, LoadReadsFileContents) {
   const auto p = write("a.nodle", "line1\nline2\n");
-  const SourceFile f = SourceFile::load(p);
-  EXPECT_EQ(f.path(), p);
-  EXPECT_EQ(f.content(), "line1\nline2\n");
+  const SourceFile::Ptr f = SourceFile::load(p);
+  EXPECT_EQ(f->path(), p);
+  EXPECT_EQ(f->content(), "line1\nline2\n");
 }
 
 TEST_F(SourceFileTest, LoadPreservesBytesExactly) {
   const std::string bytes("a\r\nb\0c", 6); // CRLF and an embedded NUL
-  const SourceFile f = SourceFile::load(write("bin.nodle", bytes));
-  EXPECT_EQ(f.content(), std::string_view(bytes));
+  const SourceFile::Ptr f = SourceFile::load(write("bin.nodle", bytes));
+  EXPECT_EQ(f->content(), std::string_view(bytes));
 }
 
 TEST_F(SourceFileTest, LoadEmptyFile) {
-  const SourceFile f = SourceFile::load(write("empty.nodle", ""));
-  EXPECT_TRUE(f.content().empty());
+  const SourceFile::Ptr f = SourceFile::load(write("empty.nodle", ""));
+  EXPECT_TRUE(f->content().empty());
 }
 
 TEST_F(SourceFileTest, LoadMissingFileThrows) {

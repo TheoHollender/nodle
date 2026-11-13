@@ -13,7 +13,7 @@ SourceFile::SourceFile(std::filesystem::path path, std::string content) {
   // TODO compute line_starts_ here.
 }
 
-SourceFile SourceFile::load(const std::filesystem::path &path) {
+SourceFile::Ptr SourceFile::load(const std::filesystem::path &path) {
   std::ifstream input(path, std::ios::binary | std::ios::ate);
   if (!input) {
     throw std::runtime_error("cannot open file: " + path.string());
@@ -35,7 +35,11 @@ SourceFile SourceFile::load(const std::filesystem::path &path) {
     throw std::runtime_error("error reading file: " + path.string());
   }
 
-  return SourceFile(path, content);
+  return std::shared_ptr<SourceFile>(new SourceFile(path, content));
+}
+SourceFile::Ptr SourceFile::from_string(std::filesystem::path path,
+                                        std::string content) {
+  return std::shared_ptr<SourceFile>(new SourceFile(path, content));
 }
 
 const std::filesystem::path &SourceFile::path() const { return path_; }

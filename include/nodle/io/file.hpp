@@ -6,7 +6,7 @@
 
 namespace nodle::io {
 
-struct SourceFile {
+struct SourceFile : public std::enable_shared_from_this<SourceFile> {
 private:
   /* Path to the source file */
   std::filesystem::path path_;
@@ -15,14 +15,12 @@ private:
   // TODO compute line_starts_ and write line utils.
   // /* Indices of line starts */
   // std::vector<uint32_t> line_starts_;
-public:
-  /**
-   * Create a source file
-   *
-   * @param path the path of the file
-   * @param content the content stored on the file on disk
-   */
+
   SourceFile(std::filesystem::path path, std::string content);
+
+public:
+  using Ptr = std::shared_ptr<SourceFile>;
+
   /**
    * Create a source file from disk.
    *
@@ -30,7 +28,14 @@ public:
    * @warning this function may throw an std::runtime_error if the file could
    * not be read.
    */
-  static SourceFile load(const std::filesystem::path &path);
+  static Ptr load(const std::filesystem::path &path);
+  /**
+   * Create a source file
+   *
+   * @param path the path of the file
+   * @param content the content stored on the file on disk
+   */
+  static Ptr from_string(std::filesystem::path path, std::string content);
 
   /**
    * Return the path of the source file.

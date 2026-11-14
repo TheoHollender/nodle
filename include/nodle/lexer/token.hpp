@@ -79,6 +79,7 @@ enum TokenType {
   D_PIPE,
 
   // ==== MISC ====
+  COMMENT,
   END_OF_FILE,
 };
 

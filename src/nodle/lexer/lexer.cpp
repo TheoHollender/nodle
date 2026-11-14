@@ -6,9 +6,9 @@ using namespace nodle::lexer;
 Lexer::Lexer() : rules_(rules::create_all_rules()) {}
 Lexer::Lexer(std::vector<rules::LexerRule> rules) : rules_(std::move(rules)) {}
 
-Token Lexer::lex_token(nodle::io::SourceLocation location) {
+std::pair<Token, bool> Lexer::lex_token(nodle::io::SourceLocation location) {
   uint32_t max_length = 0;
-  TokenType token_type;
+  rules::LexerResult best_result{};
   for (const rules::LexerRule &rule : rules_) {
     auto opt_result = rule(location);
 
@@ -22,7 +22,7 @@ Token Lexer::lex_token(nodle::io::SourceLocation location) {
     }
 
     max_length = result.length;
-    token_type = result.type;
+    best_result = result;
   }
 
   if (max_length == 0) {
@@ -32,8 +32,10 @@ Token Lexer::lex_token(nodle::io::SourceLocation location) {
                              std::to_string(location.offset()));
   }
 
-  return Token(token_type, nodle::io::SourceLocation(
-                               location.file(), location.offset(), max_length));
+  Token token(best_result.type,
+              nodle::io::SourceLocation(location.file(), location.offset(),
+                                        max_length));
+  return {std::move(token), best_result.should_skip};
 }
 std::vector<Token> Lexer::lex(nodle::io::SourceFile::Ptr file) {
   uint32_t offset = 0;
@@ -47,11 +49,13 @@ std::vector<Token> Lexer::lex(nodle::io::SourceFile::Ptr file) {
       continue;
     }
 
-    Token token = lex_token(nodle::io::SourceLocation(
+    auto [token, should_skip] = lex_token(nodle::io::SourceLocation(
         file, offset, static_cast<uint32_t>(content.size() - offset)));
 
-    tokens.push_back(std::move(token));
     offset += token.source_location().length();
+    if (!should_skip) {
+      tokens.push_back(std::move(token));
+    }
   }
 
   return tokens;

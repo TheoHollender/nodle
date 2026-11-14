@@ -35,3 +35,33 @@ SourceLocation SourceLocation::operator|(const SourceLocation &other) const {
 
   return SourceLocation(file_, span_start, span_end - span_start);
 }
+
+/**
+ * Returns a source location that spans the old one, plus some
+ * surrounding amount of lines.
+ *
+ * @param count the number of lines taken above and below
+ */
+SourceLocation SourceLocation::expand_lines(uint32_t count) const {
+  const uint32_t file_size = static_cast<uint32_t>(file_->content().size());
+  const uint32_t last_line = file_->get_line_information(file_size).line;
+
+  // Lines of the first and last character covered (an empty location covers its
+  // offset).
+  const uint32_t first_line = file_->get_line_information(offset_).line;
+  const uint32_t last_covered = length_ == 0 ? offset_ : end() - 1;
+  const uint32_t last_covered_line =
+      file_->get_line_information(last_covered).line;
+
+  const uint32_t start_line = count >= first_line ? 1 : first_line - count;
+  const uint32_t end_line = static_cast<uint32_t>(
+      std::min<uint64_t>(uint64_t{last_covered_line} + count, last_line));
+
+  const uint32_t start_offset =
+      file_->offset_of_line(LineColumn{.line = start_line, .column = 1});
+  const uint32_t end_offset =
+      file_->offset_of_line(LineColumn{.line = end_line, .column = 1}) +
+      file_->line_size(end_line);
+
+  return SourceLocation(file_, start_offset, end_offset - start_offset);
+}

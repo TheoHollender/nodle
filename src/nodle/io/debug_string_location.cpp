@@ -64,7 +64,8 @@ std::vector<DisplayLine> create_display_lines(std::string_view content,
 
 }; // namespace
 
-std::string SourceLocation::as_debug_string(uint32_t context) const {
+std::string SourceLocation::as_debug_string(bool note_location,
+                                            uint32_t context) const {
   // Format the string as
   //     -----> file.nodle:line:column
   //   8 | before code
@@ -131,6 +132,12 @@ std::string SourceLocation::as_debug_string(uint32_t context) const {
   buffer << "\n";
   print_padded("");
   buffer << "--------------------";
+
+  if (note_location) {
+    buffer << "\n";
+    print_padded("");
+    buffer << "> ";
+  }
 
   return buffer.str();
 }

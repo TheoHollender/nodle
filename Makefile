@@ -16,9 +16,9 @@ endif
 
 # Library sources = everything in src/ except main.cpp
 SRCS      := $(shell find $(SRC_DIR) -name '*.cpp' | sort)
-LIB_SRCS  := $(filter-out $(SRC_DIR)/main.cpp,$(SRCS))
+LIB_SRCS  := $(filter-out $(SRC_DIR)/nodle/main.cpp,$(SRCS))
 LIB_OBJS  := $(LIB_SRCS:%.cpp=$(BUILD)/%.o)
-MAIN_OBJ  := $(BUILD)/$(SRC_DIR)/main.o
+MAIN_OBJ  := $(BUILD)/$(SRC_DIR)/nodle/main.o
 
 # GoogleTest: prefer pkg-config, fall back to plain -l flags.
 GTEST_CFLAGS := $(shell pkg-config --cflags gtest 2>/dev/null)

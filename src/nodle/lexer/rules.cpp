@@ -148,6 +148,7 @@ std::vector<LexerRule> nodle::lexer::rules::create_all_rules() {
       create_string_rule(">=", O_GREATER_EQUAL),
       create_string_rule("&&", O_AND),
       create_string_rule("||", O_OR),
+      create_string_rule("^", O_XOR),
 
       create_string_rule("(", D_LPAREN),
       create_string_rule(")", D_RPAREN),

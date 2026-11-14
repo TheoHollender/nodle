@@ -66,6 +66,7 @@ enum TokenType {
   O_GREATER_EQUAL,
   O_AND,
   O_OR,
+  O_XOR,
 
   // ==== DELIMITERS ====
   D_LPAREN,

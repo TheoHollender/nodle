@@ -11,6 +11,8 @@
 
 namespace nodle::lexer {
 
+using Tokens = std::vector<Token>;
+
 struct Lexer {
 private:
   std::vector<rules::LexerRule> rules_;
@@ -27,7 +29,7 @@ public:
   Lexer();
   Lexer(std::vector<rules::LexerRule> rules);
 
-  std::vector<Token> lex(nodle::io::SourceFile::Ptr file);
+  Tokens lex(nodle::io::SourceFile::Ptr file);
 };
 
 }; // namespace nodle::lexer

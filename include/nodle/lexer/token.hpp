@@ -2,6 +2,7 @@
 #pragma once
 #include "nodle/io/file.hpp"
 #include "nodle/io/location.hpp"
+#include <iostream>
 
 namespace nodle::lexer {
 
@@ -115,3 +116,5 @@ public:
 };
 
 }; // namespace nodle::lexer
+
+std::ostream &operator<<(std::ostream &os, nodle::lexer::TokenType tt);

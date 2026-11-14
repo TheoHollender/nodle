@@ -20,7 +20,7 @@ SourceFile::Ptr make(const std::string &content,
 
 std::string debug(const SourceFile::Ptr &f, std::uint32_t offset,
                   std::uint32_t length, std::uint32_t context) {
-  return SourceLocation(f, offset, length).as_debug_string(context);
+  return SourceLocation(f, offset, length).as_debug_string(false, context);
 }
 
 // Joins lines with '\n' (no trailing newline).
@@ -110,7 +110,7 @@ TEST(DebugString, DefaultContextIsThreeLines) {
   EXPECT_TRUE(contains(s, "row2"));
   EXPECT_TRUE(contains(s, "row8"));
   EXPECT_FALSE(contains(s, "row9"));
-  EXPECT_EQ(s, loc.as_debug_string(3));
+  EXPECT_EQ(s, loc.as_debug_string(false, 3));
 }
 
 TEST(DebugString, GutterIsAsWideAsTheLargestLineNumber) {
@@ -122,14 +122,18 @@ TEST(DebugString, GutterIsAsWideAsTheLargestLineNumber) {
   // r9 starts at 8 * 3 = 24 ("r1\n" .. "r8\n" are 3 bytes each).
   const SourceLocation loc(f, 24, 2);
   ASSERT_EQ(loc.text(), "r9");
-  EXPECT_EQ(loc.as_debug_string(1), lines({
-                                        "    -------> file.nodle:9:1",
-                                        "  8 | r8",
-                                        "  9 | r9",
-                                        "    | ^^",
-                                        " 10 | r10",
-                                        "    " + repeat('-', 20),
-                                    }));
+  EXPECT_EQ(loc.as_debug_string(false, 1), lines({
+                                               "    -------> file.nodle:9:1",
+                                               "  8 | r8",
+                                               "  9 | r9",
+                                               "    | ^^",
+                                               " 10 | r10",
+                                               "    " + repeat('-', 20),
+                                           }));
+  EXPECT_EQ(
+      loc.as_debug_string(true, 1),
+      lines({"    -------> file.nodle:9:1", "  8 | r8", "  9 | r9", "    | ^^",
+             " 10 | r10", "    " + repeat('-', 20), "    > "}));
 }
 
 TEST(DebugString, ShowsThePathAsGiven) {

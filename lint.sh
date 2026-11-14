@@ -16,7 +16,7 @@ if [ "${1:-}" = "--check" ]; then
     mode=(--dry-run --Werror)
 fi
 
-find src include tests \
+find src/nodle include/nodle tests \
     \( -name '*.cpp' -o -name '*.cc' -o -name '*.h' -o -name '*.hh' -o -name '*.hpp' \) \
     -print0 | xargs -0 -r clang-format "${mode[@]}"
 

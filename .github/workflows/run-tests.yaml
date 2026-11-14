@@ -16,7 +16,7 @@ jobs:
         run: >
           nix develop .#ci --command bash -c
           "clang-format --dry-run --Werror
-          \$(find src include tests -name '*.cpp' -o -name '*.cc' -o -name '*.h' -o -name '*.hh' -o -name '*.hpp')"
+          \$(find src/nodle include/nodle tests -name '*.cpp' -o -name '*.cc' -o -name '*.h' -o -name '*.hh' -o -name '*.hpp')"
 
   test:
     runs-on: ubuntu-latest

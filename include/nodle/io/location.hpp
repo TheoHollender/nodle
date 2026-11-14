@@ -57,8 +57,11 @@ public:
    *
    * @param context the number of lines taken above and below the line to print
    * the string.
+   * @param note_location if enabled, adds an empty line padded for having a
+   * note below the code.
    */
-  std::string as_debug_string(uint32_t context = 3) const;
+  std::string as_debug_string(bool note_location = false,
+                              uint32_t context = 3) const;
 
 private:
   SourceFile::Ptr file_;

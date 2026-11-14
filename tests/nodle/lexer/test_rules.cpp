@@ -324,6 +324,51 @@ TEST(IdentifierRule, OutlivesTheArgumentItWasCreatedFrom) {
   EXPECT_MATCH(run_rule(rule, "abc"), 3u, K_DEF);
 }
 
+TEST(NonCommentRules, AreNotSkipped) {
+  EXPECT_FALSE(run_rule(create_number_rule(), "1")->should_skip);
+  EXPECT_FALSE(run_rule(create_string_rule("val", K_VAL), "val")->should_skip);
+  EXPECT_FALSE(
+      run_rule(create_identifier_rule(I_IDENTIFIER), "x")->should_skip);
+}
+
+// --------------------------------------------------------------- comment rule
+
+TEST(CommentRule, RunsUntilTheEndOfTheLine) {
+  auto rule = create_comment_rule("//", COMMENT);
+  EXPECT_MATCH(run_rule(rule, "// hello\nval"), 8u, COMMENT);
+  EXPECT_MATCH(run_rule(rule, "//x\n"), 3u, COMMENT);
+}
+
+TEST(CommentRule, RunsUntilTheEndOfTheFileWithoutANewline) {
+  auto rule = create_comment_rule("//", COMMENT);
+  EXPECT_MATCH(run_rule(rule, "// hello"), 8u, COMMENT);
+  EXPECT_MATCH(run_rule(rule, "//"), 2u, COMMENT);
+}
+
+TEST(CommentRule, KeepsACarriageReturnBeforeTheNewline) {
+  // Characterization: with CRLF line endings the '\r' is part of the comment.
+  EXPECT_MATCH(run_rule(create_comment_rule("//", COMMENT), "//a\r\nb"), 4u,
+               COMMENT);
+}
+
+TEST(CommentRule, IsSkipped) {
+  auto result = run_rule(create_comment_rule("//", COMMENT), "// hi");
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->should_skip);
+}
+
+TEST(CommentRule, DoesNotMatchWithoutTheFullPrefix) {
+  auto rule = create_comment_rule("//", COMMENT);
+  EXPECT_FALSE(run_rule(rule, "/ x").has_value());
+  EXPECT_FALSE(run_rule(rule, "a // x").has_value());
+  EXPECT_FALSE(run_rule(rule, "").has_value());
+}
+
+TEST(CommentRule, ReadsFromTheLocationNotFromTheStartOfTheFile) {
+  auto rule = create_comment_rule("//", COMMENT);
+  EXPECT_MATCH(run_rule(rule, "x = 1; // one\ny", 7), 6u, COMMENT);
+}
+
 // --------------------------------------------------------------- all rules
 
 namespace {
@@ -391,6 +436,12 @@ void expect_all_lex_to(const std::vector<LexerRule> &rules,
 } // namespace
 
 TEST(AllRules, IsNotEmpty) { EXPECT_FALSE(create_all_rules().empty()); }
+
+TEST(AllRules, DoubleSlashIsACommentNotTwoDivides) {
+  auto rules = create_all_rules();
+  EXPECT_MATCH(lex_longest(rules, "// a / b"), 8u, COMMENT);
+  EXPECT_MATCH(lex_longest(rules, "/ b"), 1u, O_DIVIDE);
+}
 
 TEST(AllRules, Numbers) {
   auto rules = create_all_rules();

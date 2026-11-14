@@ -27,69 +27,69 @@ struct Node {
 };
 
 // Type
-struct Type : Node {
+struct Type : public Node {
   using Node::Node;
 };
 
-struct TInteger : Type {
+struct TInteger : public Type {
   using Type::Type;
 };
-struct TFloat : Type {
+struct TFloat : public Type {
   using Type::Type;
 };
-struct TBoolean : Type {
+struct TBoolean : public Type {
   using Type::Type;
 };
-struct TTuple : Type {
+struct TTuple : public Type {
   TTuple(io::SourceLocation lparen, vec_ptr<Type> values,
          io::SourceLocation rparen)
       : Type(lparen | rparen), values(std::move(values)) {}
   vec_ptr<Type> values;
 };
 
-struct TNamed : Type {
+struct TNamed : public Type {
   TNamed(io::SourceLocation tok, std::string name)
       : Type(std::move(tok)), name(std::move(name)) {}
   std::string name;
 };
 
 // Expression
-struct Expression : Node {
+struct Expression : public Node {
   using Node::Node;
 };
 
-struct EInteger : Expression {
+struct EInteger : public Expression {
   EInteger(io::SourceLocation tok, long long value)
       : Expression(std::move(tok)), value(value) {}
   long long value;
 };
 
-struct EFloat : Expression {
+struct EFloat : public Expression {
   EFloat(io::SourceLocation tok, double value)
       : Expression(std::move(tok)), value(value) {}
   double value;
 };
 
-struct EBool : Expression {
+struct EBool : public Expression {
   EBool(io::SourceLocation tok, bool value)
       : Expression(std::move(tok)), value(value) {}
   bool value;
 };
 
-struct Var : Expression {
+struct Var : public Expression {
   Var(io::SourceLocation tok, std::string name)
       : Expression(std::move(tok)), name(std::move(name)) {}
   std::string name;
 };
 
-struct ETuple : Expression {
+struct ETuple : public Expression {
   ETuple(io::SourceLocation lparen, vec_ptr<Expression> values,
          io::SourceLocation rparen)
       : Expression(lparen | rparen), values(std::move(values)) {}
   vec_ptr<Expression> values;
 };
 
-struct Self : Expression {
+struct Self : public Expression {
   using Expression::Expression;
 };
 
@@ -110,7 +110,7 @@ enum class BinOp {
   Xor
 };
 
-struct EBinOp : Expression {
+struct EBinOp : public Expression {
   EBinOp(BinOp op, std::unique_ptr<Expression> lhs,
          std::unique_ptr<Expression> rhs)
       : Expression(lhs->source_location | rhs->source_location), op(op),
@@ -119,13 +119,13 @@ struct EBinOp : Expression {
   std::unique_ptr<Expression> lhs, rhs;
 };
 
-struct Not : Expression {
+struct Not : public Expression {
   Not(io::SourceLocation not_tok, std::unique_ptr<Expression> exp)
       : Expression(not_tok | exp->source_location), exp(std::move(exp)) {}
   std::unique_ptr<Expression> exp;
 };
 
-struct If : Expression {
+struct If : public Expression {
   If(io::SourceLocation if_tok, std::unique_ptr<Expression> cond,
      std::unique_ptr<Expression> then_branch,
      std::unique_ptr<Expression> else_branch)
@@ -135,7 +135,7 @@ struct If : Expression {
   std::unique_ptr<Expression> cond, then_branch, else_branch;
 };
 
-struct FieldAccess : Expression {
+struct FieldAccess : public Expression {
   FieldAccess(std::unique_ptr<Expression> object, io::SourceLocation field_tok,
               std::string field)
       : Expression(object->source_location | field_tok),
@@ -144,7 +144,7 @@ struct FieldAccess : Expression {
   std::string field;
 };
 
-struct Call : Expression {
+struct Call : public Expression {
   Call(io::SourceLocation func_tok, std::string func, vec_ptr<Expression> args,
        io::SourceLocation rparen)
       : Expression(func_tok | rparen), func(std::move(func)),
@@ -153,7 +153,7 @@ struct Call : Expression {
   vec_ptr<Expression> args;
 };
 
-struct MethodCall : Expression {
+struct MethodCall : public Expression {
   MethodCall(std::unique_ptr<Expression> object, std::string func,
              vec_ptr<Expression> args, io::SourceLocation rparen)
       : Expression(object->source_location | rparen), object(std::move(object)),
@@ -163,7 +163,7 @@ struct MethodCall : Expression {
   vec_ptr<Expression> args;
 };
 
-struct Instantiate : Expression {
+struct Instantiate : public Expression {
   Instantiate(io::SourceLocation type_tok, std::string type_name,
               vec_ptr<Expression> args, io::SourceLocation rparen)
       : Expression(type_tok | rparen), type_name(std::move(type_name)),
@@ -173,17 +173,17 @@ struct Instantiate : Expression {
 };
 
 // Proposition
-struct Proposition : Node {
+struct Proposition : public Node {
   using Node::Node;
 };
 
-struct PExp : Proposition {
+struct PExp : public Proposition {
   explicit PExp(std::unique_ptr<Expression> exp)
       : Proposition(exp->source_location), exp(std::move(exp)) {}
   std::unique_ptr<Expression> exp;
 };
 
-struct PFollows : Proposition {
+struct PFollows : public Proposition {
   PFollows(std::unique_ptr<Expression> e0, std::string property,
            vec_ptr<Expression> args, io::SourceLocation end)
       : Proposition(e0->source_location | end), e0(std::move(e0)),
@@ -194,7 +194,7 @@ struct PFollows : Proposition {
 };
 
 // Proof
-struct Use : Node {
+struct Use : public Node {
   Use(io::SourceLocation use_tok, std::string name, vec_ptr<Expression> args,
       io::SourceLocation end)
       : Node(use_tok | end), name(std::move(name)), args(std::move(args)) {}
@@ -205,7 +205,7 @@ struct Use : Node {
 using Proof = std::vector<Use>;
 
 // Function
-struct Param : Node {
+struct Param : public Node {
   Param(io::SourceLocation name_tok, std::string name,
         std::unique_ptr<Type> type)
       : Node(name_tok | type->source_location), name(std::move(name)),
@@ -216,7 +216,7 @@ struct Param : Node {
 
 using Params = vec_ptr<Param>;
 
-struct Function : Node {
+struct Function : public Node {
   using Node::Node;
   std::string name;
   Params params;
@@ -229,16 +229,16 @@ struct Function : Node {
 };
 
 // Member and Statement
-struct Member : Node {
+struct Member : public Node {
   using Node::Node;
 };
 
-struct SuchThat : Member {
+struct SuchThat : public Member {
   SuchThat(io::SourceLocation such_tok, std::unique_ptr<Proposition> prop)
       : Member(such_tok | prop->source_location), prop(std::move(prop)) {}
   std::unique_ptr<Proposition> prop;
 };
-struct Prove : Member {
+struct Prove : public Member {
   Prove(io::SourceLocation prove_tok, std::unique_ptr<Proposition> goal,
         Proof proof)
       : Member(prove_tok | (proof.empty() ? goal->source_location
@@ -247,7 +247,7 @@ struct Prove : Member {
   std::unique_ptr<Proposition> goal;
   Proof proof;
 };
-struct ValDecl : Member {
+struct ValDecl : public Member {
   ValDecl(io::SourceLocation val_tok, std::string name,
           std::unique_ptr<Type> type)
       : Member(val_tok | type->source_location), name(std::move(name)),
@@ -255,7 +255,7 @@ struct ValDecl : Member {
   std::string name;
   std::unique_ptr<Type> type;
 };
-struct ValDef : Member {
+struct ValDef : public Member {
   ValDef(io::SourceLocation val_tok, std::string name,
          std::unique_ptr<Type> type, std::unique_ptr<Expression> value)
       : Member(val_tok | value->source_location), name(std::move(name)),
@@ -264,14 +264,14 @@ struct ValDef : Member {
   std::unique_ptr<Type> type;
   std::unique_ptr<Expression> value;
 };
-struct Method : Member {
+struct Method : public Member {
   explicit Method(Function fn)
       : Member(fn.source_location), fn(std::move(fn)) {}
   Function fn;
 };
 
 // Graph components
-struct StateComponent : Node {
+struct StateComponent : public Node {
   StateComponent(std::unique_ptr<Expression> lower, std::string var,
                  std::unique_ptr<Expression> upper)
       : Node(lower->source_location | upper->source_location),
@@ -281,7 +281,7 @@ struct StateComponent : Node {
   std::unique_ptr<Expression> upper;
 };
 
-struct Edge : Node {
+struct Edge : public Node {
   Edge(std::unique_ptr<Expression> source, std::unique_ptr<Expression> target,
        std::unique_ptr<Expression> weight)
       : Node(source->source_location |
@@ -292,32 +292,32 @@ struct Edge : Node {
 };
 
 // Declaration
-struct Declaration : Node {
+struct Declaration : public Node {
   using Node::Node;
 };
 
-struct PropertyDecl : Declaration {
+struct PropertyDecl : public Declaration {
   using Declaration::Declaration;
   std::string name;
   Params params;
   vec_ptr<Member> requirements;
 };
 
-struct LemmaDecl : Declaration {
+struct LemmaDecl : public Declaration {
   using Declaration::Declaration;
   std::string name;
   Params params;
   vec_ptr<Member> statements;
 };
 
-struct ClassDecl : Declaration {
+struct ClassDecl : public Declaration {
   using Declaration::Declaration;
   std::string name;
   Params params;
   vec_ptr<Member> members;
 };
 
-struct GraphDecl : Declaration {
+struct GraphDecl : public Declaration {
   using Declaration::Declaration;
   std::string name;
   Params params;
@@ -327,14 +327,14 @@ struct GraphDecl : Declaration {
   vec_ptr<Member> members;
 };
 
-struct FunctionDecl : Declaration {
+struct FunctionDecl : public Declaration {
   explicit FunctionDecl(Function fn)
       : Declaration(fn.source_location), fn(std::move(fn)) {}
   Function fn;
 };
 
 // Program
-struct Program : Node {
+struct Program : public Node {
   using Node::Node;
   vec_ptr<Declaration> decls;
 };

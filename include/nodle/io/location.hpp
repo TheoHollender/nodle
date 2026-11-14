@@ -1,4 +1,5 @@
 
+#pragma once
 #include "nodle/io/file.hpp"
 
 namespace nodle::io {

@@ -39,7 +39,8 @@ public:
    */
   std::string_view text() const;
 
-  /* Takes the smallest source location that contains the two source locations
+  /**
+   * Takes the smallest source location that contains the two source locations
    */
   SourceLocation operator|(const SourceLocation &other) const;
 

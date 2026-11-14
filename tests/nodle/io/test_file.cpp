@@ -2,11 +2,14 @@
 
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "nodle/io/file.hpp"
 
+using nodle::io::LineColumn;
 using nodle::io::SourceFile;
 
 class SourceFileTest : public ::testing::Test {
@@ -89,4 +92,346 @@ TEST_F(SourceFileTest, LoadErrorMentionsPath) {
   } catch (const std::runtime_error &e) {
     EXPECT_NE(std::string(e.what()).find("nope.nodle"), std::string::npos);
   }
+}
+
+namespace {
+
+SourceFile::Ptr make(const std::string &content) {
+  return SourceFile::from_string("t.nodle", content);
+}
+
+void expect_line_column(const SourceFile::Ptr &file, std::uint32_t offset,
+                        std::uint32_t line, std::uint32_t column) {
+  SCOPED_TRACE("offset " + std::to_string(offset));
+  const LineColumn lc = file->get_line_information(offset);
+  EXPECT_EQ(lc.line, line);
+  EXPECT_EQ(lc.column, column);
+}
+
+std::uint32_t offset_of(const SourceFile::Ptr &file, std::uint32_t line,
+                        std::uint32_t column) {
+  return file->offset_of_line(LineColumn{.line = line, .column = column});
+}
+
+} // namespace
+
+TEST(SourceFileLines, EmptyFile) {
+  auto f = make("");
+  expect_line_column(f, 0, 1, 1);
+}
+
+TEST(SourceFileLines, SingleLine) {
+  auto f = make("abc");
+  expect_line_column(f, 0, 1, 1);
+  expect_line_column(f, 1, 1, 2);
+  expect_line_column(f, 2, 1, 3);
+  expect_line_column(f, 3, 1, 4); // end of file
+}
+
+TEST(SourceFileLines, EveryOffsetOfAMultiLineFile) {
+  //            0123 4 5 6 78
+  auto f = make("ab\ncd\n\nef");
+  struct Expected {
+    std::uint32_t offset, line, column;
+  };
+  const Expected table[] = {
+      {0, 1, 1}, {1, 1, 2}, {2, 1, 3}, // "ab" and its '\n'
+      {3, 2, 1}, {4, 2, 2}, {5, 2, 3}, // "cd" and its '\n'
+      {6, 3, 1},                       // blank line: just its '\n'
+      {7, 4, 1}, {8, 4, 2}, {9, 4, 3}, // "ef" and end of file
+  };
+  for (const auto &e : table) {
+    expect_line_column(f, e.offset, e.line, e.column);
+  }
+}
+
+TEST(SourceFileLines, TrailingNewlineStartsAnEmptyLastLine) {
+  auto f = make("ab\n");
+  expect_line_column(f, 2, 1, 3); // the '\n'
+  expect_line_column(f, 3, 2, 1); // end of file, on the new empty line
+}
+
+TEST(SourceFileLines, OnlyNewlines) {
+  auto f = make("\n\n");
+  expect_line_column(f, 0, 1, 1);
+  expect_line_column(f, 1, 2, 1);
+  expect_line_column(f, 2, 3, 1);
+}
+
+TEST(SourceFileLines, CrlfCountsCarriageReturnAsPartOfTheLine) {
+  auto f = make("a\r\nb");
+  expect_line_column(f, 1, 1, 2); // '\r'
+  expect_line_column(f, 2, 1, 3); // '\n'
+  expect_line_column(f, 3, 2, 1); // 'b'
+}
+
+TEST(SourceFileLines, OffsetsPastTheEndAreClampedToTheEndOfTheFile) {
+  auto one_line = make("abc");
+  expect_line_column(one_line, 4, 1, 4);
+  expect_line_column(one_line, 1000, 1, 4);
+  expect_line_column(one_line, std::numeric_limits<std::uint32_t>::max(), 1, 4);
+
+  auto two_lines = make("ab\ncd");
+  expect_line_column(two_lines, 1000, 2, 3);
+
+  expect_line_column(make(""), 5, 1, 1);
+  expect_line_column(make("ab\n"), 5, 2, 1);
+}
+
+TEST(SourceFileLines, LoadedFilesHaveTheirLineTable) {
+  const auto path =
+      std::filesystem::temp_directory_path() / "nodle-source-lines-test.nodle";
+  {
+    std::ofstream out(path, std::ios::binary);
+    out << "a\nbb\nccc";
+  }
+  auto f = SourceFile::load(path);
+  std::filesystem::remove(path);
+  expect_line_column(f, 7, 3, 3); // the last 'c'
+  expect_line_column(f, 2, 2, 1);
+}
+
+TEST(SourceFileOffsetOfLine, BasicPositions) {
+  auto f = make("ab\ncd\nef");
+  EXPECT_EQ(offset_of(f, 1, 1), 0u);
+  EXPECT_EQ(offset_of(f, 1, 2), 1u);
+  EXPECT_EQ(offset_of(f, 2, 1), 3u);
+  EXPECT_EQ(offset_of(f, 2, 2), 4u);
+  EXPECT_EQ(offset_of(f, 3, 2), 7u);
+}
+
+TEST(SourceFileOffsetOfLine, EmptyFile) {
+  auto f = make("");
+  EXPECT_EQ(offset_of(f, 1, 1), 0u);
+  EXPECT_EQ(offset_of(f, 1, 5), 0u);
+  EXPECT_EQ(offset_of(f, 3, 1), 0u);
+}
+
+TEST(SourceFileOffsetOfLine, EmptyLastLineAfterTrailingNewline) {
+  auto f = make("abc\n");
+  EXPECT_EQ(offset_of(f, 2, 1), 4u); // end of file, not the '\n' of line 1
+}
+
+TEST(SourceFileOffsetOfLine, BlankLineInTheMiddle) {
+  auto f = make("a\n\nb");
+  EXPECT_EQ(offset_of(f, 2, 1), 2u); // the blank line's '\n'
+  EXPECT_EQ(offset_of(f, 3, 1), 3u);
+}
+
+TEST(SourceFileOffsetOfLine, LineBeyondTheLastGivesEndOfFile) {
+  auto f = make("ab\ncd");
+  EXPECT_EQ(offset_of(f, 3, 1), 5u);
+  EXPECT_EQ(offset_of(f, 100, 1), 5u);
+}
+
+TEST(SourceFileOffsetOfLine, LineZeroGivesStartOfFile) {
+  auto f = make("ab\ncd");
+  EXPECT_EQ(offset_of(f, 0, 1), 0u);
+  EXPECT_EQ(offset_of(f, 0, 7), 0u);
+}
+
+TEST(SourceFileOffsetOfLine, ColumnZeroGivesStartOfTheLine) {
+  auto f = make("ab\ncd");
+  EXPECT_EQ(offset_of(f, 2, 0), 3u);
+}
+
+TEST(SourceFileOffsetOfLine, ColumnPastTheEndOfALineIsClampedToItsNewline) {
+  auto f = make("ab\ncd\nef");
+  EXPECT_EQ(offset_of(f, 1, 3), 2u); // the '\n' itself
+  EXPECT_EQ(offset_of(f, 1, 4),
+            2u); // past it: clamped, does not spill into line 2
+  EXPECT_EQ(offset_of(f, 1, 100), 2u);
+}
+
+TEST(SourceFileOffsetOfLine,
+     ColumnPastTheEndOfTheLastLineIsClampedToEndOfFile) {
+  auto f = make("ab\ncd");
+  EXPECT_EQ(offset_of(f, 2, 3), 5u); // end of file
+  EXPECT_EQ(offset_of(f, 2, 100), 5u);
+}
+
+TEST(SourceFileOffsetOfLine, HugeColumnDoesNotOverflow) {
+  auto f = make("ab\ncd");
+  const auto huge = std::numeric_limits<std::uint32_t>::max();
+  EXPECT_EQ(offset_of(f, 2, huge), 5u);
+  EXPECT_EQ(offset_of(f, 1, huge), 2u);
+}
+
+TEST(SourceFileOffsetOfLine, RoundTripsWithGetLineInformation) {
+  const std::vector<std::string> contents = {
+      "",       "\n",         "abc",          "abc\n",   "\n\n",
+      "a\n\nb", "a\r\nb\r\n", "ab\ncd\n\nef", "\n\nabc", "x",
+  };
+  for (const auto &content : contents) {
+    SCOPED_TRACE("content: " + ::testing::PrintToString(content));
+    auto f = make(content);
+    for (std::uint32_t offset = 0; offset <= content.size(); ++offset) {
+      SCOPED_TRACE("offset " + std::to_string(offset));
+      const LineColumn lc = f->get_line_information(offset);
+      EXPECT_EQ(f->offset_of_line(lc), offset);
+    }
+  }
+}
+
+namespace {
+
+std::vector<std::uint32_t> expected_sizes(const std::string &content) {
+  std::vector<std::uint32_t> sizes{0};
+  for (char c : content) {
+    if (c == '\n') {
+      sizes.push_back(0);
+    } else {
+      ++sizes.back();
+    }
+  }
+  return sizes;
+}
+
+const std::vector<std::string> kContents = {
+    "",           "\n",         "\n\n",         "abc",
+    "abc\n",      "\nabc",      "a\n\nb",       "x",
+    "a\nbbb\ncc", "ab\ncd\nef", "ab\ncd\n\nef", "a\r\nb\r\nc",
+    "\r\n",       "\r\n\r\n",   "abc\r",        "a\r\n",
+    "   \n  \n ",
+};
+
+} // namespace
+
+TEST(SourceFileLineSize, EmptyFileHasOneEmptyLine) {
+  auto f = make("");
+  EXPECT_EQ(f->line_size(1), 0u);
+}
+
+TEST(SourceFileLineSize, SingleLine) {
+  EXPECT_EQ(make("abc")->line_size(1), 3u);
+  EXPECT_EQ(make("x")->line_size(1), 1u);
+}
+
+TEST(SourceFileLineSize, EveryLineOfAMultiLineFile) {
+  auto f = make("a\nbbb\ncc");
+  EXPECT_EQ(f->line_size(1), 1u);
+  EXPECT_EQ(f->line_size(2), 3u);
+  EXPECT_EQ(f->line_size(3), 2u);
+}
+
+TEST(SourceFileLineSize, SameLengthLines) {
+  auto f = make("ab\ncd\nef");
+  EXPECT_EQ(f->line_size(1), 2u);
+  EXPECT_EQ(f->line_size(2), 2u);
+  EXPECT_EQ(f->line_size(3), 2u);
+}
+
+TEST(SourceFileLineSize, NewlineIsNotCounted) {
+  auto f = make("ab\n");
+  EXPECT_EQ(f->line_size(1), 2u);
+}
+
+TEST(SourceFileLineSize, TrailingNewlineLeavesAnEmptyLastLine) {
+  auto f = make("ab\n");
+  EXPECT_EQ(f->line_size(2), 0u);
+  EXPECT_EQ(f->line_size(3), 0u); // no such line
+}
+
+TEST(SourceFileLineSize, BlankLines) {
+  auto f = make("a\n\nb");
+  EXPECT_EQ(f->line_size(1), 1u);
+  EXPECT_EQ(f->line_size(2), 0u);
+  EXPECT_EQ(f->line_size(3), 1u);
+}
+
+TEST(SourceFileLineSize, OnlyNewlinesGivesEmptyLines) {
+  auto f = make("\n\n");
+  EXPECT_EQ(f->line_size(1), 0u);
+  EXPECT_EQ(f->line_size(2), 0u);
+  EXPECT_EQ(f->line_size(3), 0u);
+}
+
+TEST(SourceFileLineSize, CarriageReturnIsIncluded) {
+  auto f = make("a\r\nb\r\nc");
+  EXPECT_EQ(f->line_size(1), 2u); // 'a' '\r'
+  EXPECT_EQ(f->line_size(2), 2u); // 'b' '\r'
+  EXPECT_EQ(f->line_size(3), 1u); // 'c'
+}
+
+TEST(SourceFileLineSize, BlankCrlfLineHasSizeOne) {
+  auto f = make("\r\n\r\n");
+  EXPECT_EQ(f->line_size(1), 1u);
+  EXPECT_EQ(f->line_size(2), 1u);
+  EXPECT_EQ(f->line_size(3), 0u);
+}
+
+TEST(SourceFileLineSize, TrailingCarriageReturnWithoutNewline) {
+  EXPECT_EQ(make("abc\r")->line_size(1), 4u);
+}
+
+TEST(SourceFileLineSize, LinesOutOfRangeHaveSizeZero) {
+  auto f = make("ab\ncd");
+  EXPECT_EQ(f->line_size(0), 0u);
+  EXPECT_EQ(f->line_size(3), 0u);
+  EXPECT_EQ(f->line_size(100), 0u);
+  EXPECT_EQ(f->line_size(std::numeric_limits<std::uint32_t>::max()), 0u);
+  EXPECT_EQ(make("")->line_size(2), 0u);
+}
+
+TEST(SourceFileLineSize, MatchesAHandWrittenSplitOnNewlines) {
+  for (const auto &content : kContents) {
+    SCOPED_TRACE("content: " + ::testing::PrintToString(content));
+    auto f = make(content);
+    const auto sizes = expected_sizes(content);
+    for (std::size_t i = 0; i < sizes.size(); ++i) {
+      SCOPED_TRACE("line " + std::to_string(i + 1));
+      EXPECT_EQ(f->line_size(static_cast<std::uint32_t>(i + 1)), sizes[i]);
+    }
+    EXPECT_EQ(f->line_size(static_cast<std::uint32_t>(sizes.size() + 1)), 0u);
+  }
+}
+
+TEST(SourceFileLineSize, LineSizesPlusNewlinesAddUpToTheFileSize) {
+  for (const auto &content : kContents) {
+    SCOPED_TRACE("content: " + ::testing::PrintToString(content));
+    auto f = make(content);
+    std::uint64_t newlines = 0;
+    for (char c : content) {
+      newlines += (c == '\n');
+    }
+    std::uint64_t total = 0;
+    for (std::uint32_t line = 1; line <= newlines + 1; ++line) {
+      total += f->line_size(line);
+    }
+    EXPECT_EQ(total + newlines, content.size());
+  }
+}
+
+TEST(SourceFileLineSize, AgreesWithOffsetOfLine) {
+  // The last reachable column of a line is its '\n' (or end of file), so the
+  // distance from column 1 to there is exactly the line size.
+  const auto huge = std::numeric_limits<std::uint32_t>::max();
+  for (const auto &content : kContents) {
+    SCOPED_TRACE("content: " + ::testing::PrintToString(content));
+    auto f = make(content);
+    const auto lines =
+        static_cast<std::uint32_t>(expected_sizes(content).size());
+    for (std::uint32_t line = 1; line <= lines; ++line) {
+      SCOPED_TRACE("line " + std::to_string(line));
+      const auto first =
+          f->offset_of_line(LineColumn{.line = line, .column = 1});
+      const auto last =
+          f->offset_of_line(LineColumn{.line = line, .column = huge});
+      EXPECT_EQ(f->line_size(line), last - first);
+    }
+  }
+}
+
+TEST(SourceFileLineSize, LoadedFilesHaveTheirLineTable) {
+  const auto path =
+      std::filesystem::temp_directory_path() / "nodle-line-size-test.nodle";
+  {
+    std::ofstream out(path, std::ios::binary);
+    out << "a\nbb\r\nccc";
+  }
+  auto f = SourceFile::load(path);
+  std::filesystem::remove(path);
+  EXPECT_EQ(f->line_size(1), 1u);
+  EXPECT_EQ(f->line_size(2), 3u); // 'b' 'b' '\r'
+  EXPECT_EQ(f->line_size(3), 3u);
 }

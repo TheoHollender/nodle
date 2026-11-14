@@ -1,9 +1,9 @@
 
 #include "nodle/io/file.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <stdexcept>
-#include <algorithm>
 
 using namespace nodle::io;
 
@@ -11,9 +11,9 @@ SourceFile::SourceFile(std::filesystem::path path, std::string content) {
   path_ = std::move(path);
   content_ = std::move(content);
 
-  line_starts_ = { 0 };
+  line_starts_ = {0};
 
-  for (uint32_t offset = 0; offset < content_.size(); offset ++) {
+  for (uint32_t offset = 0; offset < content_.size(); offset++) {
     if (content_[offset] == '\n') {
       line_starts_.push_back(offset + 1);
     }
@@ -57,15 +57,17 @@ std::string_view SourceFile::text(uint32_t offset, uint32_t length) const {
 }
 
 LineColumn SourceFile::get_line_information(uint32_t offset) const {
-    offset = std::min<std::size_t>(offset, content_.size());
+  offset = std::min<std::size_t>(offset, content_.size());
 
-    const auto next = std::upper_bound(line_starts_.begin(), line_starts_.end(), offset);
-    const auto line = static_cast<uint32_t>(next - line_starts_.begin());
+  const auto next =
+      std::upper_bound(line_starts_.begin(), line_starts_.end(), offset);
+  const auto line = static_cast<uint32_t>(next - line_starts_.begin());
 
-    return LineColumn{.line = line, .column = offset - line_starts_[line - 1] + 1};
+  return LineColumn{.line = line,
+                    .column = offset - line_starts_[line - 1] + 1};
 }
 
-uint32_t SourceFile::offset_of_line (LineColumn line_col) const {
+uint32_t SourceFile::offset_of_line(LineColumn line_col) const {
   if (line_col.line < 1) {
     return 0;
   }
@@ -78,8 +80,22 @@ uint32_t SourceFile::offset_of_line (LineColumn line_col) const {
     return static_cast<uint32_t>(start);
   }
 
-  const uint64_t last =
-    line_col.line == line_starts_.size() ? content_.size() : line_starts_[line_col.line] - 1;
+  const uint64_t last = line_col.line == line_starts_.size()
+                            ? content_.size()
+                            : line_starts_[line_col.line] - 1;
 
-  return static_cast<uint32_t>(std::min<uint64_t>(start + (line_col.column - 1), last));
+  return static_cast<uint32_t>(
+      std::min<uint64_t>(start + (line_col.column - 1), last));
+}
+
+uint32_t SourceFile::line_size(uint32_t line) const {
+  if (line < 1 || line > line_starts_.size()) {
+    return 0;
+  }
+
+  const uint32_t start = line_starts_[line - 1];
+  const uint32_t end = line == line_starts_.size()
+                           ? static_cast<uint32_t>(content_.size())
+                           : line_starts_[line] - 1;
+  return end - start;
 }

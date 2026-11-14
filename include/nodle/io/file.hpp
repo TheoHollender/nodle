@@ -59,20 +59,30 @@ public:
 
   /**
    * Returns the line and column at a given offset.
-   * 
+   *
    * The line and columns are 1-indexed.
    * @param offset the character to check.
    */
-  LineColumn get_line_information (uint32_t offset) const;
+  LineColumn get_line_information(uint32_t offset) const;
 
   /**
    * Returns the offset for a given line and column.
-   * 
+   *
    * The line and columns are 1-indexed.
    * @param line_col the line and column
    * @return the offset of the target character.
    */
-  uint32_t offset_of_line (LineColumn line_col) const;
+  uint32_t offset_of_line(LineColumn line_col) const;
+
+  /**
+   * Returns the size of the line.
+   *
+   * The line is 1-indexed.
+   * @param line the identifier of the line
+   * @return the size of the line
+   * @warning '\r' is included but not '\n'
+   */
+  uint32_t line_size(uint32_t line) const;
 };
 
 }; // namespace nodle::io

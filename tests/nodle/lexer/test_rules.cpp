@@ -40,6 +40,8 @@ void expect_match(const Result &result, std::uint32_t length, TokenType type) {
     expect_match((result), (length), (type));                                  \
   } while (0)
 
+// Maximal munch: the longest match wins, and the earliest rule wins ties.
+// This is the lexer behaviour that create_all_rules() is designed for.
 Result lex_longest(const std::vector<LexerRule> &rules,
                    const std::string &input) {
   Result best;
@@ -52,30 +54,43 @@ Result lex_longest(const std::vector<LexerRule> &rules,
   return best;
 }
 
+// Overwrites stack memory that a dead stack frame used to occupy.
+#if defined(__GNUC__)
+__attribute__((noinline))
+#endif
+void clobber_stack() {
+  volatile char junk[8192];
+  for (auto &c : junk) {
+    c = 0x55;
+  }
+}
+
 } // namespace
 
+// ---------------------------------------------------------------- number rule
+
 TEST(NumberRule, Integer) {
-  auto rule = createNumberRule();
+  auto rule = create_number_rule();
   EXPECT_MATCH(run_rule(rule, "123"), 3u, L_INT);
   EXPECT_MATCH(run_rule(rule, "0"), 1u, L_INT);
   EXPECT_MATCH(run_rule(rule, "007"), 3u, L_INT);
 }
 
 TEST(NumberRule, Float) {
-  auto rule = createNumberRule();
+  auto rule = create_number_rule();
   EXPECT_MATCH(run_rule(rule, "3.14"), 4u, L_FLOAT);
   EXPECT_MATCH(run_rule(rule, "0.5"), 3u, L_FLOAT);
 }
 
 TEST(NumberRule, StopsAtFirstNonNumericCharacter) {
-  auto rule = createNumberRule();
+  auto rule = create_number_rule();
   EXPECT_MATCH(run_rule(rule, "42 + 1"), 2u, L_INT);
   EXPECT_MATCH(run_rule(rule, "3.14)"), 4u, L_FLOAT);
   EXPECT_MATCH(run_rule(rule, "7;"), 1u, L_INT);
 }
 
 TEST(NumberRule, RejectsANumberGluedToAnIdentifier) {
-  auto rule = createNumberRule();
+  auto rule = create_number_rule();
   EXPECT_FALSE(run_rule(rule, "2int").has_value());
   EXPECT_FALSE(run_rule(rule, "12abc").has_value());
   EXPECT_FALSE(run_rule(rule, "2x").has_value());
@@ -87,7 +102,7 @@ TEST(NumberRule, RejectsANumberGluedToAnIdentifier) {
 
 TEST(NumberRule,
      AcceptsANumberFollowedByAnythingThatIsNotAnIdentifierCharacter) {
-  auto rule = createNumberRule();
+  auto rule = create_number_rule();
   EXPECT_MATCH(run_rule(rule, "2 int"), 1u, L_INT);
   EXPECT_MATCH(run_rule(rule, "2\nint"), 1u, L_INT);
   EXPECT_MATCH(run_rule(rule, "2+int"), 1u, L_INT);
@@ -99,23 +114,23 @@ TEST(NumberRule,
 }
 
 TEST(NumberRule, SecondDotEndsTheNumber) {
-  auto rule = createNumberRule();
+  auto rule = create_number_rule();
   EXPECT_MATCH(run_rule(rule, "1.2.3"), 3u, L_FLOAT);
 }
 
 TEST(NumberRule,
      TrailingDotIsPartOfTheFloat) { // characterization of current behaviour
-  auto rule = createNumberRule();
+  auto rule = create_number_rule();
   EXPECT_MATCH(run_rule(rule, "3."), 2u, L_FLOAT);
 }
 
 TEST(NumberRule, LeadingDotIsAFloat) { // characterization of current behaviour
-  auto rule = createNumberRule();
+  auto rule = create_number_rule();
   EXPECT_MATCH(run_rule(rule, ".5"), 2u, L_FLOAT);
 }
 
 TEST(NumberRule, DoesNotMatchWithoutDigits) {
-  auto rule = createNumberRule();
+  auto rule = create_number_rule();
   EXPECT_FALSE(run_rule(rule, "").has_value());
   EXPECT_FALSE(run_rule(rule, "abc").has_value());
   EXPECT_FALSE(run_rule(rule, ".").has_value());
@@ -125,44 +140,44 @@ TEST(NumberRule, DoesNotMatchWithoutDigits) {
 }
 
 TEST(NumberRule, SignIsNotPartOfTheNumber) {
-  auto rule = createNumberRule();
+  auto rule = create_number_rule();
   EXPECT_FALSE(run_rule(rule, "-5").has_value());
   EXPECT_FALSE(run_rule(rule, "+5").has_value());
 }
 
 TEST(NumberRule, ReadsFromTheLocationNotFromTheStartOfTheFile) {
-  auto rule = createNumberRule();
+  auto rule = create_number_rule();
   EXPECT_MATCH(run_rule(rule, "x = 12;", 4), 2u, L_INT);
   EXPECT_FALSE(run_rule(rule, "12 x", 3).has_value());
 }
 
 TEST(NumberRule, EmptyLocationAtEndOfFile) {
-  auto rule = createNumberRule();
+  auto rule = create_number_rule();
   EXPECT_FALSE(run_rule(rule, "12", 2).has_value());
 }
 
 // ---------------------------------------------------------------- string rule
 
 TEST(StringRule, MatchesPrefix) {
-  auto rule = createStringRule("if", K_IF);
+  auto rule = create_string_rule("if", K_IF);
   EXPECT_MATCH(run_rule(rule, "if x"), 2u, K_IF);
   EXPECT_MATCH(run_rule(rule, "if"), 2u, K_IF);
 }
 
 TEST(StringRule, DoesNotMatchWhenKeywordIsNotAtTheStart) {
-  auto rule = createStringRule("if", K_IF);
+  auto rule = create_string_rule("if", K_IF);
   EXPECT_FALSE(run_rule(rule, "x if").has_value());
   EXPECT_FALSE(run_rule(rule, " if").has_value());
 }
 
 TEST(StringRule, DoesNotMatchInputShorterThanKeyword) {
-  auto rule = createStringRule("if", K_IF);
+  auto rule = create_string_rule("if", K_IF);
   EXPECT_FALSE(run_rule(rule, "i").has_value());
   EXPECT_FALSE(run_rule(rule, "").has_value());
 }
 
 TEST(StringRule, IsCaseSensitive) {
-  auto rule = createStringRule("if", K_IF);
+  auto rule = create_string_rule("if", K_IF);
   EXPECT_FALSE(run_rule(rule, "IF").has_value());
   EXPECT_FALSE(run_rule(rule, "If").has_value());
 }
@@ -170,36 +185,36 @@ TEST(StringRule, IsCaseSensitive) {
 TEST(StringRule,
      DoesNotCheckForAWordBoundary) { // characterization: the lexer must use
                                      // maximal munch
-  auto rule = createStringRule("if", K_IF);
+  auto rule = create_string_rule("if", K_IF);
   EXPECT_MATCH(run_rule(rule, "iffy"), 2u, K_IF);
 }
 
 TEST(StringRule, MultiCharacterOperator) {
-  auto eq = createStringRule("==", O_EQUAL);
+  auto eq = create_string_rule("==", O_EQUAL);
   EXPECT_MATCH(run_rule(eq, "== 1"), 2u, O_EQUAL);
   EXPECT_FALSE(run_rule(eq, "= 1").has_value());
   EXPECT_FALSE(run_rule(eq, "=").has_value());
 }
 
 TEST(StringRule, ShorterOperatorMatchesPrefixOfLongerOne) {
-  auto assign = createStringRule("=", D_ASSIGN);
+  auto assign = create_string_rule("=", D_ASSIGN);
   EXPECT_MATCH(run_rule(assign, "=="), 1u, D_ASSIGN);
 }
 
 TEST(StringRule, ReadsFromTheLocationNotFromTheStartOfTheFile) {
-  auto rule = createStringRule("then", K_THEN);
+  auto rule = create_string_rule("then", K_THEN);
   EXPECT_MATCH(run_rule(rule, "if x then y", 5), 4u, K_THEN);
   EXPECT_FALSE(run_rule(rule, "if x then y", 0).has_value());
 }
 
 TEST(StringRule, ReturnsTheTypeItWasCreatedWith) {
-  EXPECT_MATCH(run_rule(createStringRule("a", K_VAL), "a"), 1u, K_VAL);
-  EXPECT_MATCH(run_rule(createStringRule("a", K_DEF), "a"), 1u, K_DEF);
+  EXPECT_MATCH(run_rule(create_string_rule("a", K_VAL), "a"), 1u, K_VAL);
+  EXPECT_MATCH(run_rule(create_string_rule("a", K_DEF), "a"), 1u, K_DEF);
 }
 
 TEST(StringRule, RulesAreIndependentOfEachOther) {
-  auto if_rule = createStringRule("if", K_IF);
-  auto else_rule = createStringRule("else", K_ELSE);
+  auto if_rule = create_string_rule("if", K_IF);
+  auto else_rule = create_string_rule("else", K_ELSE);
   EXPECT_MATCH(run_rule(else_rule, "else"), 4u, K_ELSE);
   EXPECT_MATCH(run_rule(if_rule, "if"), 2u, K_IF);
   EXPECT_FALSE(run_rule(if_rule, "else").has_value());
@@ -207,30 +222,32 @@ TEST(StringRule, RulesAreIndependentOfEachOther) {
 }
 
 // The rule must own its keyword and type: it is used long after
-// createStringRule() returned, and after the caller's own variables are gone.
+// create_string_rule() returned, and after the caller's own variables are gone.
 LexerRule make_rule_from_locals() {
   std::string keyword = "hello";
   TokenType type = K_VAL;
-  return createStringRule(keyword, type);
+  return create_string_rule(keyword, type);
 }
 
 TEST(StringRule, OutlivesTheArgumentsItWasCreatedFrom) {
   auto rule = make_rule_from_locals();
+  clobber_stack();
   EXPECT_MATCH(run_rule(rule, "hello world"), 5u, K_VAL);
   EXPECT_FALSE(run_rule(rule, "world").has_value());
 }
 
 TEST(StringRule, OutlivesAKeywordThatIsLaterModified) {
   std::string keyword = "abc";
-  auto rule = createStringRule(keyword, K_VAL);
+  auto rule = create_string_rule(keyword, K_VAL);
   keyword = "zzz";
   EXPECT_MATCH(run_rule(rule, "abc"), 3u, K_VAL);
   EXPECT_FALSE(run_rule(rule, "zzz").has_value());
 }
 
 TEST(StringRule, CopiedRuleBehavesTheSame) {
-  auto rule = createStringRule("if", K_IF);
+  auto rule = create_string_rule("if", K_IF);
   LexerRule copy = rule;
+  clobber_stack();
   EXPECT_MATCH(run_rule(copy, "if"), 2u, K_IF);
   EXPECT_MATCH(run_rule(rule, "if"), 2u, K_IF);
 }
@@ -238,14 +255,14 @@ TEST(StringRule, CopiedRuleBehavesTheSame) {
 // ------------------------------------------------------------ identifier rule
 
 TEST(IdentifierRule, SimpleIdentifiers) {
-  auto rule = createIdentifierRule(I_IDENTIFIER);
+  auto rule = create_identifier_rule(I_IDENTIFIER);
   EXPECT_MATCH(run_rule(rule, "foo"), 3u, I_IDENTIFIER);
   EXPECT_MATCH(run_rule(rule, "Hello"), 5u, I_IDENTIFIER);
   EXPECT_MATCH(run_rule(rule, "x"), 1u, I_IDENTIFIER);
 }
 
 TEST(IdentifierRule, UnderscoreAndDigits) {
-  auto rule = createIdentifierRule(I_IDENTIFIER);
+  auto rule = create_identifier_rule(I_IDENTIFIER);
   EXPECT_MATCH(run_rule(rule, "_private"), 8u, I_IDENTIFIER);
   EXPECT_MATCH(run_rule(rule, "_"), 1u, I_IDENTIFIER);
   EXPECT_MATCH(run_rule(rule, "x1"), 2u, I_IDENTIFIER);
@@ -254,13 +271,13 @@ TEST(IdentifierRule, UnderscoreAndDigits) {
 }
 
 TEST(IdentifierRule, CannotStartWithADigit) {
-  auto rule = createIdentifierRule(I_IDENTIFIER);
+  auto rule = create_identifier_rule(I_IDENTIFIER);
   EXPECT_FALSE(run_rule(rule, "1x").has_value());
   EXPECT_FALSE(run_rule(rule, "9").has_value());
 }
 
 TEST(IdentifierRule, StopsAtFirstInvalidCharacter) {
-  auto rule = createIdentifierRule(I_IDENTIFIER);
+  auto rule = create_identifier_rule(I_IDENTIFIER);
   EXPECT_MATCH(run_rule(rule, "foo bar"), 3u, I_IDENTIFIER);
   EXPECT_MATCH(run_rule(rule, "foo-bar"), 3u, I_IDENTIFIER);
   EXPECT_MATCH(run_rule(rule, "foo.bar"), 3u, I_IDENTIFIER);
@@ -269,7 +286,7 @@ TEST(IdentifierRule, StopsAtFirstInvalidCharacter) {
 }
 
 TEST(IdentifierRule, DoesNotMatchEmptyOrNonIdentifierStart) {
-  auto rule = createIdentifierRule(I_IDENTIFIER);
+  auto rule = create_identifier_rule(I_IDENTIFIER);
   EXPECT_FALSE(run_rule(rule, "").has_value());
   EXPECT_FALSE(run_rule(rule, " foo").has_value());
   EXPECT_FALSE(run_rule(rule, "+").has_value());
@@ -278,31 +295,32 @@ TEST(IdentifierRule, DoesNotMatchEmptyOrNonIdentifierStart) {
 }
 
 TEST(IdentifierRule, NonAsciiBytesAreNotIdentifierCharacters) {
-  auto rule = createIdentifierRule(I_IDENTIFIER);
+  auto rule = create_identifier_rule(I_IDENTIFIER);
   EXPECT_FALSE(run_rule(rule, "\xC3\xA9").has_value()); // "é" in UTF-8
   EXPECT_MATCH(run_rule(rule, "caf\xC3\xA9"), 3u,
                I_IDENTIFIER); // stops before the é
 }
 
 TEST(IdentifierRule, ReadsFromTheLocationNotFromTheStartOfTheFile) {
-  auto rule = createIdentifierRule(I_IDENTIFIER);
+  auto rule = create_identifier_rule(I_IDENTIFIER);
   EXPECT_MATCH(run_rule(rule, "val foo = 1", 4), 3u, I_IDENTIFIER);
   EXPECT_FALSE(run_rule(rule, "val foo = 1", 7).has_value()); // at the space
 }
 
 TEST(IdentifierRule, ReturnsTheTypeItWasCreatedWith) {
-  EXPECT_MATCH(run_rule(createIdentifierRule(K_VAL), "abc"), 3u, K_VAL);
-  EXPECT_MATCH(run_rule(createIdentifierRule(I_IDENTIFIER), "abc"), 3u,
+  EXPECT_MATCH(run_rule(create_identifier_rule(K_VAL), "abc"), 3u, K_VAL);
+  EXPECT_MATCH(run_rule(create_identifier_rule(I_IDENTIFIER), "abc"), 3u,
                I_IDENTIFIER);
 }
 
 LexerRule make_identifier_rule_from_local() {
   TokenType type = K_DEF;
-  return createIdentifierRule(type);
+  return create_identifier_rule(type);
 }
 
 TEST(IdentifierRule, OutlivesTheArgumentItWasCreatedFrom) {
   auto rule = make_identifier_rule_from_local();
+  clobber_stack();
   EXPECT_MATCH(run_rule(rule, "abc"), 3u, K_DEF);
 }
 
@@ -372,23 +390,25 @@ void expect_all_lex_to(const std::vector<LexerRule> &rules,
 
 } // namespace
 
-TEST(AllRules, IsNotEmpty) { EXPECT_FALSE(createAllRules().empty()); }
+TEST(AllRules, IsNotEmpty) { EXPECT_FALSE(create_all_rules().empty()); }
 
 TEST(AllRules, Numbers) {
-  auto rules = createAllRules();
+  auto rules = create_all_rules();
   EXPECT_MATCH(lex_longest(rules, "123"), 3u, L_INT);
   EXPECT_MATCH(lex_longest(rules, "1.5"), 3u, L_FLOAT);
   EXPECT_MATCH(lex_longest(rules, ".5"), 2u, L_FLOAT);
 }
 
-TEST(AllRules, Keywords) { expect_all_lex_to(createAllRules(), kKeywords); }
+TEST(AllRules, Keywords) { expect_all_lex_to(create_all_rules(), kKeywords); }
 
-TEST(AllRules, Operators) { expect_all_lex_to(createAllRules(), kOperators); }
+TEST(AllRules, Operators) { expect_all_lex_to(create_all_rules(), kOperators); }
 
-TEST(AllRules, Delimiters) { expect_all_lex_to(createAllRules(), kDelimiters); }
+TEST(AllRules, Delimiters) {
+  expect_all_lex_to(create_all_rules(), kDelimiters);
+}
 
 TEST(AllRules, LongerOperatorBeatsItsPrefix) {
-  auto rules = createAllRules();
+  auto rules = create_all_rules();
   EXPECT_MATCH(lex_longest(rules, "==="), 2u, O_EQUAL);
   EXPECT_MATCH(lex_longest(rules, "=="), 2u, O_EQUAL);
   EXPECT_MATCH(lex_longest(rules, "= ="), 1u, D_ASSIGN);
@@ -403,14 +423,14 @@ TEST(AllRules, LongerOperatorBeatsItsPrefix) {
 }
 
 TEST(AllRules, DotIsADelimiterUnlessFollowedByDigits) {
-  auto rules = createAllRules();
+  auto rules = create_all_rules();
   EXPECT_MATCH(lex_longest(rules, "."), 1u, D_DOT);
   EXPECT_MATCH(lex_longest(rules, ".x"), 1u, D_DOT);
   EXPECT_MATCH(lex_longest(rules, ".5"), 2u, L_FLOAT);
 }
 
 TEST(AllRules, IdentifiersThatStartWithAKeyword) {
-  auto rules = createAllRules();
+  auto rules = create_all_rules();
   EXPECT_MATCH(lex_longest(rules, "integer"), 7u, I_IDENTIFIER);
   EXPECT_MATCH(lex_longest(rules, "iffy"), 4u, I_IDENTIFIER);
   EXPECT_MATCH(lex_longest(rules, "int2"), 4u, I_IDENTIFIER);
@@ -420,7 +440,7 @@ TEST(AllRules, IdentifiersThatStartWithAKeyword) {
 }
 
 TEST(AllRules, NumberGluedToAnIdentifierMatchesNothing) {
-  auto rules = createAllRules();
+  auto rules = create_all_rules();
   EXPECT_FALSE(lex_longest(rules, "2int").has_value());
   EXPECT_FALSE(lex_longest(rules, "2abc").has_value());
   EXPECT_FALSE(lex_longest(rules, "2_x").has_value());
@@ -431,13 +451,13 @@ TEST(AllRules, NumberGluedToAnIdentifierMatchesNothing) {
 TEST(AllRules, KeywordBeatsIdentifierOnATie) {
   // "true" is matched by both the keyword rule and the identifier rule at
   // length 4. The keyword rules must therefore come before the identifier rule.
-  auto rules = createAllRules();
+  auto rules = create_all_rules();
   EXPECT_MATCH(lex_longest(rules, "true"), 4u, L_TRUE);
   EXPECT_MATCH(lex_longest(rules, "val x"), 3u, K_VAL);
 }
 
 TEST(AllRules, PlainIdentifiers) {
-  auto rules = createAllRules();
+  auto rules = create_all_rules();
   EXPECT_MATCH(lex_longest(rules, "foo"), 3u, I_IDENTIFIER);
   EXPECT_MATCH(lex_longest(rules, "_x1"), 3u, I_IDENTIFIER);
   EXPECT_MATCH(lex_longest(rules, "Class"), 5u,
@@ -445,7 +465,7 @@ TEST(AllRules, PlainIdentifiers) {
 }
 
 TEST(AllRules, ExpressionPrefixes) {
-  auto rules = createAllRules();
+  auto rules = create_all_rules();
   EXPECT_MATCH(lex_longest(rules, "x+1"), 1u, I_IDENTIFIER);
   EXPECT_MATCH(lex_longest(rules, "+1"), 1u, O_PLUS);
   EXPECT_MATCH(lex_longest(rules, "(a)"), 1u, D_LPAREN);
@@ -453,7 +473,7 @@ TEST(AllRules, ExpressionPrefixes) {
 }
 
 TEST(AllRules, UnknownCharactersMatchNothing) {
-  auto rules = createAllRules();
+  auto rules = create_all_rules();
   EXPECT_FALSE(lex_longest(rules, "@").has_value());
   EXPECT_FALSE(lex_longest(rules, "#").has_value());
   EXPECT_FALSE(lex_longest(rules, "&").has_value()); // only "&&" exists
@@ -463,21 +483,23 @@ TEST(AllRules, UnknownCharactersMatchNothing) {
 }
 
 TEST(AllRules, RulesStayValidAfterTheirCreationFrameIsGone) {
-  auto rules = createAllRules();
+  auto rules = create_all_rules();
+  clobber_stack();
   EXPECT_MATCH(lex_longest(rules, "class"), 5u, K_CLASS);
   EXPECT_MATCH(lex_longest(rules, "override"), 8u, K_OVERRIDE);
   EXPECT_MATCH(lex_longest(rules, "foo"), 3u, I_IDENTIFIER);
 }
 
 TEST(AllRules, EachCallReturnsIndependentWorkingRules) {
-  auto first = createAllRules();
-  auto second = createAllRules();
+  auto first = create_all_rules();
+  auto second = create_all_rules();
   first.clear();
+  clobber_stack();
   EXPECT_MATCH(lex_longest(second, "graph"), 5u, K_GRAPH);
 }
 
 TEST(AllRules, RulesAreStateless) {
-  auto rules = createAllRules();
+  auto rules = create_all_rules();
   for (int i = 0; i < 3; ++i) {
     EXPECT_MATCH(lex_longest(rules, "weight"), 6u, K_WEIGHT);
     EXPECT_MATCH(lex_longest(rules, "12.5"), 4u, L_FLOAT);
@@ -485,7 +507,7 @@ TEST(AllRules, RulesAreStateless) {
 }
 
 TEST(AllRules, WorkOnAnInputPositionInTheMiddleOfAFile) {
-  auto rules = createAllRules();
+  auto rules = create_all_rules();
   auto file = SourceFile::from_string("t.nodle", "val x = 42;");
   const auto size = static_cast<std::uint32_t>(file->text(0, 100).size());
   auto lex_at = [&](std::uint32_t offset) {

@@ -8,7 +8,7 @@ using namespace nodle::io;
 using namespace nodle::lexer;
 using namespace nodle::lexer::rules;
 
-LexerRule nodle::lexer::rules::createNumberRule() {
+LexerRule nodle::lexer::rules::create_number_rule() {
   return [](SourceLocation location) -> std::optional<LexerResult> {
     std::string_view view = location.text();
 
@@ -43,8 +43,8 @@ LexerRule nodle::lexer::rules::createNumberRule() {
     return {{offset, had_dot ? L_FLOAT : L_INT}};
   };
 }
-LexerRule nodle::lexer::rules::createStringRule(std::string keyword,
-                                                TokenType type) {
+LexerRule nodle::lexer::rules::create_string_rule(std::string keyword,
+                                                  TokenType type) {
   return [keyword = std::move(keyword),
           type](SourceLocation location) -> std::optional<LexerResult> {
     if (location.text().substr(0, keyword.size()) != keyword) {
@@ -54,7 +54,7 @@ LexerRule nodle::lexer::rules::createStringRule(std::string keyword,
     return {{static_cast<uint32_t>(keyword.size()), type}};
   };
 }
-LexerRule nodle::lexer::rules::createIdentifierRule(TokenType type) {
+LexerRule nodle::lexer::rules::create_identifier_rule(TokenType type) {
   return [type](SourceLocation location) -> std::optional<LexerResult> {
     std::string_view view = location.text();
 
@@ -78,69 +78,69 @@ LexerRule nodle::lexer::rules::createIdentifierRule(TokenType type) {
   };
 }
 
-std::vector<LexerRule> nodle::lexer::rules::createAllRules() {
+std::vector<LexerRule> nodle::lexer::rules::create_all_rules() {
   return {
-      createNumberRule(),
+      create_number_rule(),
 
-      createStringRule("false", L_FALSE),
-      createStringRule("true", L_TRUE),
+      create_string_rule("false", L_FALSE),
+      create_string_rule("true", L_TRUE),
 
-      createStringRule("int", K_INT),
-      createStringRule("float", K_FLOAT),
-      createStringRule("bool", K_BOOL),
+      create_string_rule("int", K_INT),
+      create_string_rule("float", K_FLOAT),
+      create_string_rule("bool", K_BOOL),
 
-      createStringRule("val", K_VAL),
+      create_string_rule("val", K_VAL),
 
-      createStringRule("if", K_IF),
-      createStringRule("then", K_THEN),
-      createStringRule("else", K_ELSE),
+      create_string_rule("if", K_IF),
+      create_string_rule("then", K_THEN),
+      create_string_rule("else", K_ELSE),
 
-      createStringRule("self", K_SELF),
-      createStringRule("class", K_CLASS),
-      createStringRule("graph", K_GRAPH),
-      createStringRule("state", K_STATE),
-      createStringRule("weight", K_WEIGHT),
-      createStringRule("edge", K_EDGE),
+      create_string_rule("self", K_SELF),
+      create_string_rule("class", K_CLASS),
+      create_string_rule("graph", K_GRAPH),
+      create_string_rule("state", K_STATE),
+      create_string_rule("weight", K_WEIGHT),
+      create_string_rule("edge", K_EDGE),
 
-      createStringRule("prove", K_PROVE),
-      createStringRule("with", K_WITH),
-      createStringRule("proof", K_PROOF),
-      createStringRule("such", K_SUCH),
-      createStringRule("that", K_THAT),
-      createStringRule("follows", K_FOLLOWS),
-      createStringRule("equivalence", K_EQUIVALENCE),
-      createStringRule("property", K_PROPERTY),
-      createStringRule("lemma", K_LEMMA),
-      createStringRule("use", K_USE),
+      create_string_rule("prove", K_PROVE),
+      create_string_rule("with", K_WITH),
+      create_string_rule("proof", K_PROOF),
+      create_string_rule("such", K_SUCH),
+      create_string_rule("that", K_THAT),
+      create_string_rule("follows", K_FOLLOWS),
+      create_string_rule("equivalence", K_EQUIVALENCE),
+      create_string_rule("property", K_PROPERTY),
+      create_string_rule("lemma", K_LEMMA),
+      create_string_rule("use", K_USE),
 
-      createStringRule("def", K_DEF),
-      createStringRule("override", K_OVERRIDE),
+      create_string_rule("def", K_DEF),
+      create_string_rule("override", K_OVERRIDE),
 
-      createStringRule("!", O_NOT),
-      createStringRule("+", O_PLUS),
-      createStringRule("-", O_MINUS),
-      createStringRule("*", O_TIMES),
-      createStringRule("/", O_DIVIDE),
-      createStringRule("%", O_MODULO),
-      createStringRule("==", O_EQUAL),
-      createStringRule("!=", O_DIFFERENT),
-      createStringRule("<", O_LESS_THAN),
-      createStringRule("<=", O_LESS_EQUAL),
-      createStringRule(">", O_GREATER_THAN),
-      createStringRule(">=", O_GREATER_EQUAL),
-      createStringRule("&&", O_AND),
-      createStringRule("||", O_OR),
+      create_string_rule("!", O_NOT),
+      create_string_rule("+", O_PLUS),
+      create_string_rule("-", O_MINUS),
+      create_string_rule("*", O_TIMES),
+      create_string_rule("/", O_DIVIDE),
+      create_string_rule("%", O_MODULO),
+      create_string_rule("==", O_EQUAL),
+      create_string_rule("!=", O_DIFFERENT),
+      create_string_rule("<", O_LESS_THAN),
+      create_string_rule("<=", O_LESS_EQUAL),
+      create_string_rule(">", O_GREATER_THAN),
+      create_string_rule(">=", O_GREATER_EQUAL),
+      create_string_rule("&&", O_AND),
+      create_string_rule("||", O_OR),
 
-      createStringRule("(", D_LPAREN),
-      createStringRule(")", D_RPAREN),
-      createStringRule(".", D_DOT),
-      createStringRule(",", D_COMMA),
-      createStringRule(":", D_COLON),
-      createStringRule(";", D_SEMICOLON),
-      createStringRule("=", D_ASSIGN),
-      createStringRule("--", D_EDGE),
-      createStringRule("|", D_PIPE),
+      create_string_rule("(", D_LPAREN),
+      create_string_rule(")", D_RPAREN),
+      create_string_rule(".", D_DOT),
+      create_string_rule(",", D_COMMA),
+      create_string_rule(":", D_COLON),
+      create_string_rule(";", D_SEMICOLON),
+      create_string_rule("=", D_ASSIGN),
+      create_string_rule("--", D_EDGE),
+      create_string_rule("|", D_PIPE),
 
-      createIdentifierRule(I_IDENTIFIER),
+      create_identifier_rule(I_IDENTIFIER),
   };
 }

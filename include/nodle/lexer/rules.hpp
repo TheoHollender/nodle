@@ -18,10 +18,10 @@ struct LexerResult {
 
 using LexerRule = std::function<std::optional<LexerResult>(io::SourceLocation)>;
 
-LexerRule createNumberRule();
-LexerRule createStringRule(std::string keyword, TokenType type);
-LexerRule createIdentifierRule(TokenType type);
+LexerRule create_number_rule();
+LexerRule create_string_rule(std::string keyword, TokenType type);
+LexerRule create_identifier_rule(TokenType type);
 
-std::vector<LexerRule> createAllRules();
+std::vector<LexerRule> create_all_rules();
 
 } // namespace nodle::lexer::rules

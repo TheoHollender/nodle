@@ -82,16 +82,17 @@ std::string SourceLocation::as_debug_string(uint32_t context) const {
 
   const auto line_column = file_->get_line_information(offset_);
 
-  const uint32_t first_line = file_->get_line_information(total_location.offset_).line;
+  const uint32_t first_line =
+      file_->get_line_information(total_location.offset_).line;
   const uint32_t last_covered = total_location.length_ == 0
                                     ? total_location.offset_
                                     : total_location.end() - 1;
   const uint32_t last_covered_line =
       file_->get_line_information(last_covered).line;
 
-  std::vector<DisplayLine> display_lines =
-      create_display_lines(file_->content(), total_location.offset(),
-                           total_location.end(), offset(), std::max(offset() + 1, end()));
+  std::vector<DisplayLine> display_lines = create_display_lines(
+      file_->content(), total_location.offset(), total_location.end(), offset(),
+      std::max(offset() + 1, end()));
 
   uint32_t padding = std::to_string(last_covered_line).size();
   std::stringstream buffer;
@@ -114,7 +115,7 @@ std::string SourceLocation::as_debug_string(uint32_t context) const {
       print_padded(std::to_string(line));
       buffer << "| ";
 
-      continue ;
+      continue;
     }
 
     buffer << "\n";

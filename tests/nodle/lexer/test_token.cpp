@@ -25,13 +25,13 @@ TEST(Token, StoresTokenType) {
   EXPECT_EQ(
       Token(TokenType::I_IDENTIFIER, SourceLocation(file, 0, 3)).token_type(),
       TokenType::I_IDENTIFIER);
-  EXPECT_EQ(Token(TokenType::L_NUMBER, SourceLocation(file, 4, 2)).token_type(),
-            TokenType::L_NUMBER);
+  EXPECT_EQ(Token(TokenType::L_INT, SourceLocation(file, 4, 2)).token_type(),
+            TokenType::L_INT);
 }
 
 TEST(Token, StoresSourceLocation) {
   auto file = make_file("foo 42");
-  Token tok(TokenType::L_NUMBER, SourceLocation(file, 4, 2));
+  Token tok(TokenType::L_INT, SourceLocation(file, 4, 2));
   const SourceLocation loc = tok.source_location();
   EXPECT_EQ(loc.file(), file);
   EXPECT_EQ(loc.offset(), 4u);
@@ -42,8 +42,7 @@ TEST(Token, TextIsTheCoveredSlice) {
   auto file = make_file("foo 42");
   EXPECT_EQ(Token(TokenType::I_IDENTIFIER, SourceLocation(file, 0, 3)).text(),
             "foo");
-  EXPECT_EQ(Token(TokenType::L_NUMBER, SourceLocation(file, 4, 2)).text(),
-            "42");
+  EXPECT_EQ(Token(TokenType::L_INT, SourceLocation(file, 4, 2)).text(), "42");
 }
 
 TEST(Token, ZeroLengthTokenHasEmptyText) {
@@ -68,18 +67,18 @@ TEST(Token, TextStaysValidAfterOriginalFilePointerIsReleased) {
 
 TEST(Token, CopyKeepsTypeAndLocation) {
   auto file = make_file("foo 42");
-  Token a(TokenType::L_NUMBER, SourceLocation(file, 4, 2));
+  Token a(TokenType::L_INT, SourceLocation(file, 4, 2));
   Token b = a;
-  EXPECT_EQ(b.token_type(), TokenType::L_NUMBER);
+  EXPECT_EQ(b.token_type(), TokenType::L_INT);
   EXPECT_EQ(b.text(), "42");
   EXPECT_EQ(b.source_location().file(), a.source_location().file());
 }
 
 TEST(Token, MoveKeepsTypeAndLocation) {
   auto file = make_file("foo 42");
-  Token a(TokenType::L_NUMBER, SourceLocation(file, 4, 2));
+  Token a(TokenType::L_INT, SourceLocation(file, 4, 2));
   Token b = std::move(a);
-  EXPECT_EQ(b.token_type(), TokenType::L_NUMBER);
+  EXPECT_EQ(b.token_type(), TokenType::L_INT);
   EXPECT_EQ(b.text(), "42");
 }
 
@@ -100,7 +99,7 @@ TEST(Token, TextThrowsWhenLocationIsOutOfRange) {
 TEST(Token, UnionOfTokenLocationsSpansASequence) {
   auto file = make_file("let x = 1");
   Token first(TokenType::I_IDENTIFIER, SourceLocation(file, 0, 3));
-  Token last(TokenType::L_NUMBER, SourceLocation(file, 8, 1));
+  Token last(TokenType::L_INT, SourceLocation(file, 8, 1));
   EXPECT_EQ((first.source_location() | last.source_location()).text(),
             "let x = 1");
 }

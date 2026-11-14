@@ -7,7 +7,8 @@ namespace nodle::lexer {
 
 enum TokenType {
   // ==== Literals ====
-  L_NUMBER,
+  L_INT,
+  L_FLOAT,
   L_FALSE,
   L_TRUE,
 

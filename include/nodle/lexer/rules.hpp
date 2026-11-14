@@ -14,8 +14,6 @@ namespace nodle::lexer::rules {
 struct LexerResult {
   uint32_t length;
   TokenType type;
-  // When true, the lexer consumes the match but drops it from its output
-  // (e.g. comments).
   bool should_skip = false;
 };
 

@@ -12,7 +12,8 @@ struct Lexer {
 private:
   std::vector<rules::LexerRule> rules_;
 
-  Token lex_token (nodle::io::SourceLocation location);
+  Token lex_token(nodle::io::SourceLocation location);
+
 public:
   Lexer();
   Lexer(std::vector<rules::LexerRule> rules);

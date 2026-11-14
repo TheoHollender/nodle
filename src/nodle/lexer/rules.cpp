@@ -78,6 +78,24 @@ LexerRule nodle::lexer::rules::create_identifier_rule(TokenType type) {
   };
 }
 
+LexerRule nodle::lexer::rules::create_comment_rule(std::string comment_start,
+                                                   TokenType type) {
+  return [comment_start = std::move(comment_start),
+          type](SourceLocation location) -> std::optional<LexerResult> {
+    std::string_view view = location.text();
+
+    if (view.substr(0, comment_start.size()) != comment_start) {
+      return {};
+    }
+    auto offset = static_cast<uint32_t>(comment_start.size());
+    while (offset < view.size() && view[offset] != '\n') {
+      offset++;
+    }
+
+    return {{offset, type, true}};
+  };
+}
+
 std::vector<LexerRule> nodle::lexer::rules::create_all_rules() {
   return {
       create_number_rule(),
@@ -130,6 +148,7 @@ std::vector<LexerRule> nodle::lexer::rules::create_all_rules() {
       create_string_rule(">=", O_GREATER_EQUAL),
       create_string_rule("&&", O_AND),
       create_string_rule("||", O_OR),
+      create_string_rule("^", O_XOR),
 
       create_string_rule("(", D_LPAREN),
       create_string_rule(")", D_RPAREN),
@@ -141,6 +160,7 @@ std::vector<LexerRule> nodle::lexer::rules::create_all_rules() {
       create_string_rule("--", D_EDGE),
       create_string_rule("|", D_PIPE),
 
+      create_comment_rule("//", COMMENT),
       create_identifier_rule(I_IDENTIFIER),
   };
 }

@@ -14,6 +14,7 @@ namespace nodle::lexer::rules {
 struct LexerResult {
   uint32_t length;
   TokenType type;
+  bool should_skip = false;
 };
 
 using LexerRule = std::function<std::optional<LexerResult>(io::SourceLocation)>;
@@ -21,6 +22,7 @@ using LexerRule = std::function<std::optional<LexerResult>(io::SourceLocation)>;
 LexerRule create_number_rule();
 LexerRule create_string_rule(std::string keyword, TokenType type);
 LexerRule create_identifier_rule(TokenType type);
+LexerRule create_comment_rule(std::string comment_start, TokenType type);
 
 std::vector<LexerRule> create_all_rules();
 

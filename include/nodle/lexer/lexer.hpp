@@ -1,6 +1,9 @@
 
 #pragma once
 
+#include <utility>
+#include <vector>
+
 #include "nodle/io/file.hpp"
 #include "nodle/io/location.hpp"
 #include "nodle/lexer/rules.hpp"
@@ -12,7 +15,13 @@ struct Lexer {
 private:
   std::vector<rules::LexerRule> rules_;
 
-  Token lex_token(nodle::io::SourceLocation location);
+  /**
+   * Lexes the longest token starting at `location`.
+   *
+   * @return the token, and whether the matching rule asked for it to be
+   * skipped (e.g. a comment).
+   */
+  std::pair<Token, bool> lex_token(nodle::io::SourceLocation location);
 
 public:
   Lexer();

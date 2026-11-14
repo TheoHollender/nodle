@@ -163,6 +163,49 @@ TEST(LexerLex, Numbers) {
   EXPECT_EQ(types_of(lex("1+2")), (Types{L_INT, O_PLUS, L_INT}));
 }
 
+// ------------------------------------------------------------ lex(): comments
+
+TEST(LexerLex, CommentOnlyInputGivesNoTokens) {
+  EXPECT_TRUE(lex("// nothing here").empty());
+  EXPECT_TRUE(lex("//").empty());
+  EXPECT_TRUE(lex("// a\n// b\n").empty());
+}
+
+TEST(LexerLex, CommentsAreDropped) {
+  EXPECT_EQ(texts_of(lex("val x = 1; // the answer\nval y = 2;")),
+            (Texts{"val", "x", "=", "1", ";", "val", "y", "=", "2", ";"}));
+}
+
+TEST(LexerLex, CommentEndsAtTheNewline) {
+  auto tokens = lex("a // b c\nd");
+  EXPECT_EQ(texts_of(tokens), (Texts{"a", "d"}));
+  EXPECT_EQ(tokens[1].source_location().offset(), 9u);
+}
+
+TEST(LexerLex, CommentWithoutTrailingNewlineAtEndOfFile) {
+  EXPECT_EQ(texts_of(lex("x // trailing")), (Texts{"x"}));
+}
+
+TEST(LexerLex, CommentWithCrlfLineEndings) {
+  EXPECT_EQ(texts_of(lex("a // c\r\nb\r\n")), (Texts{"a", "b"}));
+}
+
+TEST(LexerLex, CommentGluedToTokens) {
+  EXPECT_EQ(texts_of(lex("a//b\nc")), (Texts{"a", "c"}));
+}
+
+TEST(LexerLex, SingleSlashIsStillDivision) {
+  EXPECT_EQ(types_of(lex("a / b")),
+            (Types{I_IDENTIFIER, O_DIVIDE, I_IDENTIFIER}));
+  EXPECT_EQ(types_of(lex("a/b")),
+            (Types{I_IDENTIFIER, O_DIVIDE, I_IDENTIFIER}));
+}
+
+TEST(LexerLex, CommentHidesOtherwiseInvalidCharacters) {
+  EXPECT_NO_THROW(lex("x // @ # $ \xC3\xA9"));
+  EXPECT_THROW(lex("x // ok\n@"), std::runtime_error);
+}
+
 // ------------------------------------------------------------ lex(): locations
 
 TEST(LexerLex, TokenLocationsPointIntoTheSourceFile) {
@@ -321,6 +364,32 @@ TEST(LexerRules, EarliestRuleWinsATie) {
   Lexer other_first(
       std::vector<LexerRule>{literal("ab", K_ELSE), literal("ab", K_IF)});
   EXPECT_EQ(types_of(other_first.lex(make_file("ab"))), (Types{K_ELSE}));
+}
+
+TEST(LexerRules, SkippedMatchIsConsumedButNotEmitted) {
+  LexerRule skip_hash = [](SourceLocation loc) -> std::optional<LexerResult> {
+    if (loc.text().substr(0, 1) != "#") {
+      return std::nullopt;
+    }
+    return LexerResult{1, COMMENT, true};
+  };
+  Lexer lexer(std::vector<LexerRule>{literal("ab", K_VAL), skip_hash});
+  auto tokens = lexer.lex(make_file("#ab##ab#"));
+  EXPECT_EQ(types_of(tokens), (Types{K_VAL, K_VAL}));
+  ASSERT_EQ(tokens.size(), 2u);
+  EXPECT_EQ(tokens[0].source_location().offset(), 1u);
+  EXPECT_EQ(tokens[1].source_location().offset(), 5u);
+}
+
+TEST(LexerRules, LongerNonSkippedMatchBeatsAShorterSkippedOne) {
+  LexerRule skip_a = [](SourceLocation loc) -> std::optional<LexerResult> {
+    if (loc.text().substr(0, 1) != "a") {
+      return std::nullopt;
+    }
+    return LexerResult{1, COMMENT, true};
+  };
+  Lexer lexer(std::vector<LexerRule>{skip_a, literal("ab", K_VAL)});
+  EXPECT_EQ(types_of(lexer.lex(make_file("ab a"))), (Types{K_VAL}));
 }
 
 TEST(LexerRules, ZeroLengthMatchIsNotAMatchAndCannotLoopForever) {

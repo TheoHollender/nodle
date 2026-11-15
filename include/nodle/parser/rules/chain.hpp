@@ -67,7 +67,7 @@ public:
   ChainRule(SR1 sub_rule1, SR2 sub_rule2)
       : sub_rule1_(sub_rule1), sub_rule2_(sub_rule2) {}
 
-  ParseResult<return_type> parse(ParserContextPtr ctx) {
+  ParseResult<return_type> parse(ParserContextPtr ctx) const {
     ParseResult<typename SR1::return_type> res1 = sub_rule1_.parse(ctx);
     if (!res1.has_value()) {
       return ParseResult<return_type>::NoMatch();

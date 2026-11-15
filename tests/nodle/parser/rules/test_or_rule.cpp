@@ -55,21 +55,21 @@ ParserContextPtr sample_context() {
 template <typename T> struct ZeroRule : BasicRuleTrait<ZeroRule<T>, T> {
   T value;
   explicit ZeroRule(T v) : value(std::move(v)) {}
-  ParseResult<T> parse(ParserContextPtr) {
+  ParseResult<T> parse(ParserContextPtr) const {
     return ParseResult<T>::Match(value, false);
   }
 };
 
 // Never matches.
 template <typename T> struct FailRule : BasicRuleTrait<FailRule<T>, T> {
-  ParseResult<T> parse(ParserContextPtr) { return ParseResult<T>::NoMatch(); }
+  ParseResult<T> parse(ParserContextPtr) const { return ParseResult<T>::NoMatch(); }
 };
 
 // Consumes one token of any type and yields `value`.
 template <typename T> struct EatRule : BasicRuleTrait<EatRule<T>, T> {
   T value;
   explicit EatRule(T v) : value(std::move(v)) {}
-  ParseResult<T> parse(ParserContextPtr ctx) {
+  ParseResult<T> parse(ParserContextPtr ctx) const {
     if (!ctx->remaining()) {
       return ParseResult<T>::NoMatch();
     }
@@ -82,7 +82,7 @@ template <typename T> struct EatRule : BasicRuleTrait<EatRule<T>, T> {
 struct UniqueRule : BasicRuleTrait<UniqueRule, std::unique_ptr<int>> {
   int value;
   explicit UniqueRule(int v) : value(v) {}
-  ParseResult<std::unique_ptr<int>> parse(ParserContextPtr ctx) {
+  ParseResult<std::unique_ptr<int>> parse(ParserContextPtr ctx) const {
     if (!ctx->remaining()) {
       return ParseResult<std::unique_ptr<int>>::NoMatch();
     }
@@ -100,7 +100,7 @@ struct LoggedRule : BasicRuleTrait<LoggedRule<R>, typename R::return_type> {
   std::shared_ptr<std::vector<std::string>> log;
   LoggedRule(R r, std::string n, std::shared_ptr<std::vector<std::string>> l)
       : inner(std::move(r)), name(std::move(n)), log(std::move(l)) {}
-  ParseResult<typename R::return_type> parse(ParserContextPtr ctx) {
+  ParseResult<typename R::return_type> parse(ParserContextPtr ctx) const {
     log->push_back(name);
     return inner.parse(ctx);
   }

@@ -15,7 +15,7 @@ public:
 
   TokenRule(lexer::TokenType token_type) : token_type_(token_type) {}
 
-  ParseResult<lexer::Token> parse(ParserContextPtr ctx) {
+  ParseResult<lexer::Token> parse(ParserContextPtr ctx) const {
     if (ctx->remaining() && ctx->peek().token_type() == token_type_) {
       lexer::Token token = ctx->peek();
       ctx->pop();

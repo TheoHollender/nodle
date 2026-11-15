@@ -11,7 +11,7 @@ struct CallRule : public BasicRuleTrait<CallRule<RV, Func>, RV> {
 public:
   using return_value = RV;
 
-  ParseResult<RV> parse(ParserContextPtr ctx) { return Func(ctx); }
+  ParseResult<RV> parse(ParserContextPtr ctx) const { return Func(ctx); }
 };
 
 } // namespace nodle::parser::rules

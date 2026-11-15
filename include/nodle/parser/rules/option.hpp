@@ -78,7 +78,7 @@ private:
 public:
   OptionRule(SR sub_rule) : sub_rule_(std::move(sub_rule)) {}
 
-  ParseResult<return_type> parse(ParserContextPtr ctx) {
+  ParseResult<return_type> parse(ParserContextPtr ctx) const {
     ParseResult<typename SR::return_type> res = sub_rule_.parse(ctx);
     if (res.has_value()) {
       return ParseResult<return_type>::Match(

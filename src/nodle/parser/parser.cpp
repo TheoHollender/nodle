@@ -13,20 +13,20 @@ auto make_term_rule() {
   return (rules::TokenRule{L_INT}.map<std::unique_ptr<Expression>>(
              [](Token tok) {
                return std::make_unique<EInteger>(
-                   tok, std::atoi(std::string(tok.text()).c_str()));
+                   tok.source_location(), std::atoi(std::string(tok.text()).c_str()));
              })) |
          (rules::TokenRule{L_FLOAT}.map<std::unique_ptr<Expression>>(
              [](Token tok) {
                return std::make_unique<EFloat>(
-                   tok, std::atof(std::string(tok.text()).c_str()));
+                   tok.source_location(), std::atof(std::string(tok.text()).c_str()));
              })) |
          (rules::TokenRule{L_TRUE}.map<std::unique_ptr<Expression>>(
-             [](Token tok) { return std::make_unique<EBool>(tok, true); })) |
+             [](Token tok) { return std::make_unique<EBool>(tok.source_location(), true); })) |
          (rules::TokenRule{L_FALSE}.map<std::unique_ptr<Expression>>(
-             [](Token tok) { return std::make_unique<EBool>(tok, false); })) |
+             [](Token tok) { return std::make_unique<EBool>(tok.source_location(), false); })) |
          (rules::TokenRule{K_SELF}.map<std::unique_ptr<Expression>>(
              [](Token tok) {
-               return std::make_unique<Self>(tok);
+               return std::make_unique<Self>(tok.source_location());
              })); // TODO var, not, tuple, field access, call, method call,
                   // instantiation
 }

@@ -56,6 +56,35 @@ concept BasicRule = requires(const T t, ParserContextPtr ctx) {
 
 template <typename Derived, typename Ret> struct BasicRuleTrait;
 
+template <BasicRule SR>
+struct ManyRule : public BasicRuleTrait<ManyRule<SR>,
+                                        std::vector<typename SR::return_type>> {
+  using return_type = std::vector<typename SR::return_type>;
+
+private:
+  SR sub_rule_;
+
+public:
+  ManyRule(SR sub_rule) : sub_rule_(std::move(sub_rule)) {}
+
+  ParseResult<return_type> parse(ParserContextPtr ctx) const {
+    return_type result;
+
+    while (true) {
+      ParseResult<typename SR::return_type> sub_result = sub_rule_.parse(ctx);
+
+      if (!sub_result.is_match_consumed()) {
+        break;
+      }
+
+      result.push_back(std::move(*sub_result));
+    }
+
+    bool consumed = !result.empty();
+    return ParseResult<return_type>::Match(std::move(result), consumed);
+  }
+};
+
 template <BasicRule SR, typename U>
 struct MapRule : public BasicRuleTrait<MapRule<SR, U>, U> {
   using return_type = U;
@@ -87,7 +116,12 @@ template <typename Derived, typename Ret> struct BasicRuleTrait {
   using return_type = Ret;
 
   template <typename U> MapRule<Derived, U> map(std::function<U(Ret)> func) {
-    return MapRule<Derived, U>(static_cast<const Derived &>(*this), std::move(func));
+    return MapRule<Derived, U>(static_cast<const Derived &>(*this),
+                               std::move(func));
+  }
+
+  auto many() const {
+    return ManyRule<Derived>(static_cast<const Derived &>(*this));
   }
 };
 

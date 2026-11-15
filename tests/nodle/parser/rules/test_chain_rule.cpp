@@ -57,7 +57,9 @@ template <typename T> struct ZeroRule : BasicRuleTrait<ZeroRule<T>, T> {
 
 // Never matches.
 template <typename T> struct FailRule : BasicRuleTrait<FailRule<T>, T> {
-  ParseResult<T> parse(ParserContextPtr) const { return ParseResult<T>::NoMatch(); }
+  ParseResult<T> parse(ParserContextPtr) const {
+    return ParseResult<T>::NoMatch();
+  }
 };
 
 // Consumes one token of any type and yields `value`.

@@ -47,6 +47,13 @@ struct merge_unique<V, std::variant<T, Ts...>> {
                                      std::variant<Ts...>>::type;
 };
 
+template <typename T> struct singleton_to_type {
+  using type = T;
+};
+template <typename T> struct singleton_to_type<std::variant<T>> {
+  using type = T;
+};
+
 } // namespace detail
 
 /**
@@ -58,10 +65,11 @@ struct merge_unique<V, std::variant<T, Ts...>> {
  *   unpack_or_t<variant<X, Y>, variant<Z>> -> variant<X, Y, Z>
  */
 template <typename X, typename Y>
-using unpack_or_t = typename detail::merge_unique<
-    typename detail::merge_unique<std::variant<>,
-                                  detail::as_variant_t<X>>::type,
-    detail::as_variant_t<Y>>::type;
+using unpack_or_t =
+    typename detail::singleton_to_type<typename detail::merge_unique<
+        typename detail::merge_unique<std::variant<>,
+                                      detail::as_variant_t<X>>::type,
+        detail::as_variant_t<Y>>::type>::type;
 
 /**
  * Puts a value (plain or variant) into the flat variant R, which is
@@ -75,12 +83,20 @@ template <typename R, typename T> constexpr R unpack_or(T &&value) {
   if constexpr (detail::is_std_variant_v<T>) {
     return std::visit(
         [](auto &&alt) -> R {
-          return R(std::in_place_type<std::decay_t<decltype(alt)>>,
-                   std::forward<decltype(alt)>(alt));
+          if constexpr (detail::is_std_variant_v<R>) {
+            return R(std::in_place_type<std::decay_t<decltype(alt)>>,
+                     std::forward<decltype(alt)>(alt));
+          } else {
+            return alt;
+          }
         },
         std::forward<T>(value));
   } else {
-    return R(std::in_place_type<std::decay_t<T>>, std::forward<T>(value));
+    if constexpr (detail::is_std_variant_v<R>) {
+      return R(std::in_place_type<std::decay_t<T>>, std::forward<T>(value));
+    } else {
+      return value;
+    }
   }
 }
 

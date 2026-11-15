@@ -253,17 +253,6 @@ TEST_F(AstLocation, ChainedAccessesSpanTheWholeChain) {
   EXPECT_EQ(text(chain), "f(a).g.h(b)");
 }
 
-TEST_F(AstLocation, InstantiateSpansFromTypeNameToClosingParen) {
-  lex("Foo(true, false)");
-  vec_ptr<Expression> args;
-  args.push_back(std::make_unique<EBool>(tok("true"), true));
-  args.push_back(std::make_unique<EBool>(tok("false"), false));
-  Instantiate inst(tok("Foo"), "Foo", std::move(args), tok(")"));
-
-  EXPECT_EQ(text(inst), "Foo(true, false)");
-  EXPECT_EQ(inst.type_name, "Foo");
-}
-
 TEST_F(AstLocation, NodesCanBeOwnedThroughTheirBase) {
   lex("a + b");
   std::unique_ptr<Node> node =

@@ -163,15 +163,6 @@ struct MethodCall : public Expression {
   vec_ptr<Expression> args;
 };
 
-struct Instantiate : public Expression {
-  Instantiate(io::SourceLocation type_tok, std::string type_name,
-              vec_ptr<Expression> args, io::SourceLocation rparen)
-      : Expression(type_tok | rparen), type_name(std::move(type_name)),
-        args(std::move(args)) {}
-  std::string type_name;
-  vec_ptr<Expression> args;
-};
-
 // Proposition
 struct Proposition : public Node {
   using Node::Node;

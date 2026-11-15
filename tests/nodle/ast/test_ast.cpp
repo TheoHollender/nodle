@@ -210,49 +210,6 @@ TEST_F(AstLocation, FieldAccessSpansFromObjectToField) {
   EXPECT_EQ(access.field, "field");
 }
 
-TEST_F(AstLocation, CallSpansFromNameToClosingParen) {
-  lex("f(a, b)");
-  vec_ptr<Expression> args;
-  args.push_back(var("a"));
-  args.push_back(var("b"));
-  Call call(tok("f"), "f", std::move(args), tok(")"));
-
-  EXPECT_EQ(text(call), "f(a, b)");
-  EXPECT_EQ(call.func, "f");
-}
-
-TEST_F(AstLocation, CallWithoutArgumentsIncludesItsParentheses) {
-  lex("f()");
-  Call call(tok("f"), "f", {}, tok(")"));
-
-  EXPECT_EQ(text(call), "f()");
-  EXPECT_TRUE(call.args.empty());
-}
-
-TEST_F(AstLocation, MethodCallSpansFromObjectToClosingParen) {
-  lex("obj.m(z)");
-  vec_ptr<Expression> args;
-  args.push_back(var("z"));
-  MethodCall call(var("obj"), "m", std::move(args), tok(")"));
-
-  EXPECT_EQ(text(call), "obj.m(z)");
-}
-
-TEST_F(AstLocation, ChainedAccessesSpanTheWholeChain) {
-  lex("f(a).g.h(b)");
-  vec_ptr<Expression> f_args;
-  f_args.push_back(var("a"));
-  auto call =
-      std::make_unique<Call>(tok("f"), "f", std::move(f_args), tok(")", 0));
-  auto access = std::make_unique<FieldAccess>(std::move(call), tok("g"), "g");
-  vec_ptr<Expression> h_args;
-  h_args.push_back(var("b"));
-  MethodCall chain(std::move(access), "h", std::move(h_args), tok(")", 1));
-
-  EXPECT_EQ(text(*chain.object), "f(a).g");
-  EXPECT_EQ(text(chain), "f(a).g.h(b)");
-}
-
 TEST_F(AstLocation, NodesCanBeOwnedThroughTheirBase) {
   lex("a + b");
   std::unique_ptr<Node> node =

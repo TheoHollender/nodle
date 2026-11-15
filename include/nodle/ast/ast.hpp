@@ -145,21 +145,11 @@ struct FieldAccess : public Expression {
 };
 
 struct Call : public Expression {
-  Call(io::SourceLocation func_tok, std::string func, vec_ptr<Expression> args,
+  Call(std::unique_ptr<Expression> object, vec_ptr<Expression> args,
        io::SourceLocation rparen)
-      : Expression(func_tok | rparen), func(std::move(func)),
-        args(std::move(args)) {}
-  std::string func;
-  vec_ptr<Expression> args;
-};
-
-struct MethodCall : public Expression {
-  MethodCall(std::unique_ptr<Expression> object, std::string func,
-             vec_ptr<Expression> args, io::SourceLocation rparen)
       : Expression(object->source_location | rparen), object(std::move(object)),
-        func(std::move(func)), args(std::move(args)) {}
+        args(std::move(args)) {}
   std::unique_ptr<Expression> object;
-  std::string func;
   vec_ptr<Expression> args;
 };
 

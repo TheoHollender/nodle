@@ -32,6 +32,8 @@ using nodle::parser::rules::OptionRule;
 using nodle::parser::rules::OrRule;
 using nodle::parser::rules::ParseResult;
 using nodle::parser::rules::TokenRule;
+using nodle::parser::rules::option_utils::collapse_into_option;
+using nodle::parser::rules::option_utils::optional_collapsed_t;
 using enum nodle::lexer::TokenType;
 
 namespace {
@@ -117,11 +119,115 @@ std::size_t drain(const ParserContextPtr &ctx) {
   return n;
 }
 
+struct X {
+  bool operator==(const X &) const = default;
+};
+
 } // namespace
 
 // NOTE: write `OptionRule rule{a};` with braces (see the ChainRule tests).
-// To nest options, spell the type out: `OptionRule rule{OptionRule{a}};` would
-// deduce the copy constructor (OptionRule<A>), not OptionRule<OptionRule<A>>.
+// `OptionRule rule{OptionRule{a}};` deduces the copy constructor
+// (OptionRule<A>), not OptionRule<OptionRule<A>>. The nesting tests spell the
+// type out so that they really test an option of an option.
+
+// ------------------------------------------------------- optional_collapsed_t
+
+static_assert(std::is_same_v<optional_collapsed_t<int>, std::optional<int>>);
+static_assert(std::is_same_v<optional_collapsed_t<std::optional<int>>,
+                             std::optional<int>>);
+static_assert(
+    std::is_same_v<optional_collapsed_t<std::optional<std::optional<int>>>,
+                   std::optional<int>>);
+static_assert(std::is_same_v<optional_collapsed_t<std::optional<
+                                 std::optional<std::optional<std::string>>>>,
+                             std::optional<std::string>>);
+// Only optionals are collapsed.
+static_assert(std::is_same_v<optional_collapsed_t<std::variant<int, X>>,
+                             std::optional<std::variant<int, X>>>);
+static_assert(std::is_same_v<optional_collapsed_t<std::tuple<int, X>>,
+                             std::optional<std::tuple<int, X>>>);
+static_assert(
+    std::is_same_v<optional_collapsed_t<std::variant<std::optional<int>, X>>,
+                   std::optional<std::variant<std::optional<int>, X>>>);
+
+// -----------------------------------------------------------
+// collapse_into_option
+
+TEST(CollapseIntoOption, WrapsAPlainValue) {
+  auto r = collapse_into_option(5);
+  static_assert(std::is_same_v<decltype(r), std::optional<int>>);
+  ASSERT_TRUE(r.has_value());
+  EXPECT_EQ(*r, 5);
+}
+
+TEST(CollapseIntoOption, KeepsAnEngagedOptionalAsIs) {
+  auto r = collapse_into_option(std::optional<int>(5));
+  static_assert(std::is_same_v<decltype(r), std::optional<int>>);
+  ASSERT_TRUE(r.has_value());
+  EXPECT_EQ(*r, 5);
+}
+
+TEST(CollapseIntoOption, KeepsAnEmptyOptionalEmpty) {
+  auto r = collapse_into_option(std::optional<int>());
+  static_assert(std::is_same_v<decltype(r), std::optional<int>>);
+  EXPECT_FALSE(r.has_value());
+}
+
+TEST(CollapseIntoOption, CollapsesTwoLevels) {
+  auto r = collapse_into_option(
+      std::optional<std::optional<int>>(std::optional<int>(5)));
+  static_assert(std::is_same_v<decltype(r), std::optional<int>>);
+  ASSERT_TRUE(r.has_value());
+  EXPECT_EQ(*r, 5);
+}
+
+TEST(CollapseIntoOption, AnEmptyInnerOptionalGivesAnEmptyResult) {
+  auto r = collapse_into_option(
+      std::optional<std::optional<int>>(std::optional<int>()));
+  static_assert(std::is_same_v<decltype(r), std::optional<int>>);
+  EXPECT_FALSE(r.has_value());
+}
+
+TEST(CollapseIntoOption, AnEmptyOuterOptionalGivesAnEmptyResult) {
+  auto r = collapse_into_option(std::optional<std::optional<int>>());
+  static_assert(std::is_same_v<decltype(r), std::optional<int>>);
+  EXPECT_FALSE(r.has_value());
+}
+
+TEST(CollapseIntoOption, CollapsesThreeLevels) {
+  using Deep = std::optional<std::optional<std::optional<std::string>>>;
+  auto r = collapse_into_option(Deep(std::optional<std::optional<std::string>>(
+      std::optional<std::string>("deep"))));
+  static_assert(std::is_same_v<decltype(r), std::optional<std::string>>);
+  ASSERT_TRUE(r.has_value());
+  EXPECT_EQ(*r, "deep");
+}
+
+TEST(CollapseIntoOption, MovesAMoveOnlyValue) {
+  auto r = collapse_into_option(std::make_unique<int>(4));
+  static_assert(
+      std::is_same_v<decltype(r), std::optional<std::unique_ptr<int>>>);
+  ASSERT_TRUE(r.has_value());
+  EXPECT_EQ(**r, 4);
+}
+
+TEST(CollapseIntoOption, MovesAMoveOnlyValueOutOfAnOptional) {
+  auto r = collapse_into_option(
+      std::optional<std::unique_ptr<int>>(std::make_unique<int>(4)));
+  static_assert(
+      std::is_same_v<decltype(r), std::optional<std::unique_ptr<int>>>);
+  ASSERT_TRUE(r.has_value());
+  EXPECT_EQ(**r, 4);
+}
+
+TEST(CollapseIntoOption, DoesNotUnpackOtherWrappers) {
+  auto r =
+      collapse_into_option(std::variant<int, std::string>(std::string("s")));
+  static_assert(std::is_same_v<decltype(r),
+                               std::optional<std::variant<int, std::string>>>);
+  ASSERT_TRUE(r.has_value());
+  EXPECT_EQ(std::get<std::string>(*r), "s");
+}
 
 // ------------------------------------------------------------------ the rule's
 // type
@@ -139,9 +245,19 @@ static_assert(
     std::is_same_v<
         OptionRule<OrRule<EatRule<int>, EatRule<std::string>>>::return_type,
         std::optional<std::variant<int, std::string>>>);
-// An option of an option is not flattened.
+// Optionals are collapsed: an option never returns an optional of an optional.
 static_assert(std::is_same_v<OptionRule<OptionRule<EatRule<int>>>::return_type,
-                             std::optional<std::optional<int>>>);
+                             std::optional<int>>);
+static_assert(
+    std::is_same_v<OptionRule<EatRule<std::optional<int>>>::return_type,
+                   std::optional<int>>);
+static_assert(
+    std::is_same_v<
+        OptionRule<EatRule<std::optional<std::optional<int>>>>::return_type,
+        std::optional<int>>);
+static_assert(
+    std::is_same_v<OptionRule<OptionRule<OptionRule<TokenRule>>>::return_type,
+                   std::optional<Token>>);
 
 TEST(OptionRule, DeducesItsTemplateArgumentFromTheSubRule) {
   OptionRule rule{TokenRule(K_VAL)};
@@ -330,12 +446,10 @@ TEST(OptionRule, MoveOnlyValuesAreMovedNotCopied) {
 }
 
 TEST(OptionRule, AnAbsentMoveOnlyValueIsEmpty) {
-  OptionRule<OptionRule<FailRule<std::unique_ptr<int>>>> rule{
-      OptionRule{FailRule<std::unique_ptr<int>>{}}};
+  OptionRule rule{FailRule<std::unique_ptr<int>>{}};
   auto result = rule.parse(sample_context());
   ASSERT_TRUE(result.has_value());
-  ASSERT_TRUE(result->has_value());
-  EXPECT_FALSE((*result)->has_value());
+  EXPECT_FALSE(result->has_value());
 }
 
 TEST(OptionRule, ADefaultValueIsNotConfusedWithAnAbsentOne) {
@@ -349,31 +463,84 @@ TEST(OptionRule, ADefaultValueIsNotConfusedWithAnAbsentOne) {
 // ------------------------------------------------------------------------
 // nesting
 
-TEST(OptionRule, AnOptionOfAnOptionThatMatchesHoldsAnEngagedInnerOptional) {
+TEST(OptionRule, AnOptionOfAnOptionThatMatchesIsASingleOptional) {
   OptionRule<OptionRule<TokenRule>> rule{OptionRule{TokenRule(K_VAL)}};
   auto result = rule.parse(sample_context());
   ASSERT_TRUE(result.has_value());
   EXPECT_TRUE(result.is_match_consumed());
+  static_assert(std::is_same_v<std::remove_cvref_t<decltype(*result)>,
+                               std::optional<Token>>);
   ASSERT_TRUE(result->has_value());
-  ASSERT_TRUE((*result)->has_value());
-  EXPECT_EQ((**result)->text(), "val");
+  EXPECT_EQ((*result)->text(), "val");
 }
 
-TEST(OptionRule, AnOptionOfAnOptionThatDoesNotMatchHoldsAnEmptyInnerOptional) {
-  // The inner option always matches, so the outer one is always present.
+TEST(OptionRule, AnOptionOfAnOptionThatDoesNotMatchIsAnEmptyOptional) {
   OptionRule<OptionRule<TokenRule>> rule{OptionRule{TokenRule(D_SEMICOLON)}};
   auto result = rule.parse(sample_context());
   ASSERT_TRUE(result.has_value());
   EXPECT_TRUE(result.is_match_zero());
-  ASSERT_TRUE(result->has_value());
-  EXPECT_FALSE((*result)->has_value());
+  EXPECT_FALSE(result->has_value());
 }
 
-TEST(OptionRule, ANestedOptionThatFailsFallsBackToNothingConsumed) {
+TEST(OptionRule, ANestedOptionThatFailsConsumesNothing) {
   OptionRule<OptionRule<TokenRule>> rule{OptionRule{TokenRule(D_SEMICOLON)}};
   auto ctx = sample_context();
   rule.parse(ctx);
   EXPECT_EQ(drain(ctx), 5u);
+}
+
+TEST(OptionRule, ThreeNestedOptionsStillGiveASingleOptional) {
+  OptionRule<OptionRule<OptionRule<TokenRule>>> rule{
+      OptionRule<OptionRule<TokenRule>>{OptionRule{TokenRule(K_VAL)}}};
+  auto result = rule.parse(sample_context());
+  ASSERT_TRUE(result.has_value());
+  static_assert(std::is_same_v<std::remove_cvref_t<decltype(*result)>,
+                               std::optional<Token>>);
+  ASSERT_TRUE(result->has_value());
+  EXPECT_EQ((*result)->text(), "val");
+}
+
+TEST(OptionRule, AnOptionalValuedSubRuleIsNotWrappedAgain) {
+  OptionRule rule{EatRule<std::optional<int>>(std::optional<int>(8))};
+  auto result = rule.parse(sample_context());
+  ASSERT_TRUE(result.has_value());
+  static_assert(std::is_same_v<std::remove_cvref_t<decltype(*result)>,
+                               std::optional<int>>);
+  EXPECT_TRUE(result.is_match_consumed());
+  ASSERT_TRUE(result->has_value());
+  EXPECT_EQ(**result, 8);
+}
+
+TEST(OptionRule, AnEmptyOptionalFromTheSubRuleGivesAnEmptyOptional) {
+  // The sub rule matched (and consumed a token) but its value is empty: the
+  // value is empty too, while the match status of the sub rule is kept.
+  OptionRule rule{EatRule<std::optional<int>>(std::optional<int>())};
+  auto ctx = sample_context();
+  auto result = rule.parse(ctx);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result.is_match_consumed());
+  EXPECT_FALSE(result->has_value());
+  EXPECT_EQ(drain(ctx), 4u);
+}
+
+TEST(OptionRule,
+     AnEmptyOptionalFromAZeroLengthSubRuleIsAZeroLengthEmptyOption) {
+  OptionRule rule{ZeroRule<std::optional<int>>(std::optional<int>())};
+  auto result = rule.parse(sample_context());
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result.is_match_zero());
+  EXPECT_FALSE(result->has_value());
+}
+
+TEST(OptionRule, ADoublyOptionalSubRuleValueIsCollapsed) {
+  using Opt2 = std::optional<std::optional<int>>;
+  OptionRule rule{EatRule<Opt2>(Opt2(std::optional<int>(3)))};
+  auto result = rule.parse(sample_context());
+  ASSERT_TRUE(result.has_value());
+  static_assert(std::is_same_v<std::remove_cvref_t<decltype(*result)>,
+                               std::optional<int>>);
+  ASSERT_TRUE(result->has_value());
+  EXPECT_EQ(**result, 3);
 }
 
 // ------------------------------------------------------ with the ChainRule

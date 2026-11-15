@@ -730,3 +730,18 @@ TEST(OptionRule, OneRuleObjectCanBeUsedRepeatedlyAndOnDifferentContexts) {
   EXPECT_EQ(first->peek().token_type(), I_IDENTIFIER);
   EXPECT_EQ(second->peek().token_type(), I_IDENTIFIER);
 }
+
+TEST(OptionRule,
+     OneRuleObjectCanBeUsedRepeatedlyAndOnDifferentContextsWithNot) {
+  auto rule = ~TokenRule(K_VAL);
+  auto first = sample_context();
+  auto second = sample_context();
+  auto a = rule.parse(first);
+  auto b = rule.parse(second);
+  auto c = rule.parse(first); // `first` now starts at "x"
+  EXPECT_TRUE(a->has_value());
+  EXPECT_TRUE(b->has_value());
+  EXPECT_FALSE(c->has_value());
+  EXPECT_EQ(first->peek().token_type(), I_IDENTIFIER);
+  EXPECT_EQ(second->peek().token_type(), I_IDENTIFIER);
+}

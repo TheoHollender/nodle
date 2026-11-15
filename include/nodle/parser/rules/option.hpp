@@ -90,4 +90,8 @@ public:
   }
 };
 
+template <BasicRule SR> OptionRule<SR> operator~(SR sub_rule) {
+  return OptionRule<SR>(std::move(sub_rule));
+}
+
 } // namespace nodle::parser::rules

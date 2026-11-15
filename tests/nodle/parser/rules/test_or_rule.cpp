@@ -738,3 +738,15 @@ TEST(OrRule, OneRuleObjectCanBeUsedRepeatedlyAndOnDifferentContexts) {
   EXPECT_EQ(first->peek().token_type(), D_ASSIGN);
   EXPECT_EQ(second->peek().token_type(), I_IDENTIFIER);
 }
+
+TEST(OrRule, OneRuleObjectCanBeUsedRepeatedlyAndOnDifferentContextsWithOr) {
+  auto rule = TokenRule(K_VAL) | TokenRule(I_IDENTIFIER);
+  auto first = sample_context();
+  auto second = sample_context();
+  EXPECT_TRUE(rule.parse(first).is_match_consumed());
+  EXPECT_TRUE(rule.parse(second).is_match_consumed());
+  EXPECT_TRUE(rule.parse(first).is_match_consumed()); // now matches "x"
+  EXPECT_TRUE(rule.parse(first).is_no_match());       // now starts at '='
+  EXPECT_EQ(first->peek().token_type(), D_ASSIGN);
+  EXPECT_EQ(second->peek().token_type(), I_IDENTIFIER);
+}

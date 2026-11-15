@@ -121,4 +121,9 @@ public:
   }
 };
 
+template <BasicRule SR1, BasicRule SR2>
+OrRule<SR1, SR2> operator|(SR1 sub_rule1, SR2 sub_rule2) {
+  return OrRule<SR1, SR2>(std::move(sub_rule1), std::move(sub_rule2));
+}
+
 } // namespace nodle::parser::rules

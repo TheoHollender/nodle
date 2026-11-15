@@ -280,6 +280,10 @@ TEST(ChainRule, ConsumedIfBothConsumed) {
   ChainRule chain{EatRule<int>(1), EatRule<int>(2)};
   EXPECT_TRUE(chain.parse(sample_context()).is_match_consumed());
 }
+TEST(ChainRule, ConsumedIfBothConsumedWithOperand) {
+  auto chain = EatRule<int>(1) >> EatRule<int>(2);
+  EXPECT_TRUE(chain.parse(sample_context()).is_match_consumed());
+}
 
 TEST(ChainRule, ConsumedIfOnlyTheFirstConsumed) {
   ChainRule chain{EatRule<int>(1), ZeroRule<int>(2)};

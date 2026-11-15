@@ -2,8 +2,10 @@
 #pragma once
 
 #include "nodle/parser/context.hpp"
+#include <functional>
 #include <memory>
 #include <optional>
+#include <utility>
 
 namespace nodle::parser::rules {
 
@@ -52,8 +54,41 @@ concept BasicRule = requires(T t, std::shared_ptr<ParserContext> ctx) {
   { t.parse(ctx) } -> std::same_as<ParseResult<typename T::return_type>>;
 };
 
+template <typename Derived, typename Ret> struct BasicRuleTrait;
+
+template <BasicRule SR, typename U>
+struct MapRule : public BasicRuleTrait<MapRule<SR, U>, U> {
+  using return_type = U;
+  using source_type = typename SR::return_type;
+
+  using func_type = std::function<return_type(source_type)>;
+
+private:
+  SR sub_rule_;
+  func_type func_;
+
+public:
+  MapRule(SR sub_rule, func_type func)
+      : sub_rule_(std::move(sub_rule)), func_(std::move(func)) {}
+
+  ParseResult<return_type> parse(ParserContextPtr ctx) {
+    ParseResult<source_type> res = sub_rule_.parse(ctx);
+
+    if (res.has_value()) {
+      return ParseResult<return_type>::Match(func_(std::move(*res)),
+                                             res.is_match_consumed());
+    }
+
+    return ParseResult<return_type>::NoMatch();
+  }
+};
+
 template <typename Derived, typename Ret> struct BasicRuleTrait {
   using return_type = Ret;
+
+  template <typename U> MapRule<Derived, U> map(std::function<U(Ret)> func) {
+    return MapRule<Derived, U>(static_cast<Derived>(*this), std::move(func));
+  }
 };
 
 } // namespace nodle::parser::rules

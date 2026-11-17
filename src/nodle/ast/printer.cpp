@@ -231,7 +231,10 @@ void Printer::visit(const ValDef &node) {
   print_child(node.value.get());
 }
 
-void Printer::visit(const Method &node) { visit(node.fn); }
+void Printer::visit(const Method &node) {
+  out_ << "method ";
+  visit(node.fn);
+}
 
 // ==== Graph components ====
 

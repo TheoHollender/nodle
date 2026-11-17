@@ -275,7 +275,8 @@ TEST_F(AstPrinter, Members) {
   EXPECT_EQ(to_string(ValDecl(loc(), "x", int_type())), "val x: int");
   EXPECT_EQ(to_string(ValDef(loc(), "x", int_type(), num(3))),
             "val x: int = 3");
-  EXPECT_EQ(to_string(Method(function("get", var("y")))), "def get(): int = y");
+  EXPECT_EQ(to_string(Method(function("get", var("y")))),
+            "method def get(): int = y");
 }
 
 TEST_F(AstPrinter, GraphComponents) {
@@ -296,7 +297,7 @@ TEST_F(AstPrinter, ClassMembersAreIndentedAndSeparatedBySemicolons) {
 
   EXPECT_EQ(to_string(decl), "class Point(x: int):\n"
                              "  val y: int = x;\n"
-                             "  def get(): int = y");
+                             "  method def get(): int = y");
 }
 
 TEST_F(AstPrinter, NestedBlocksIndentFurther) {
@@ -311,7 +312,7 @@ TEST_F(AstPrinter, NestedBlocksIndentFurther) {
   decl.members.push_back(std::make_unique<Method>(std::move(fn)));
 
   EXPECT_EQ(to_string(decl), "class C():\n"
-                             "  override def f(): int =\n"
+                             "  method override def f(): int =\n"
                              "    such that true;\n"
                              "    1\n"
                              "    prove equivalence ()");
@@ -397,7 +398,7 @@ TEST_F(AstPrinter, GraphMembersIndentLikeClassMembers) {
                               "  state ();\n"
                               "  weight ();\n"
                               "  edge a -> b;\n"
-                              "  override def f(): int =\n"
+                              "  method override def f(): int =\n"
                               "    1\n"
                               "    prove equivalence ()");
 }

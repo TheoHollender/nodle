@@ -1,0 +1,52 @@
+
+#include "nodle/cli/runner.hpp"
+#include "nodle/ast/printer.hpp"
+
+namespace nodle::cli {
+
+struct DebugParserCLI : public RunnerCLI {
+private:
+  bool debug_parser_enabled = false;
+  bool verbose_source_location = false;
+
+public:
+  void pre_argument_parser(argparse::ArgumentParser &parser) override {
+    parser.add_argument("-Dp", "--debug-parser")
+        .help("Debug the parser stage, printing the AST")
+        .flag();
+    parser.add_argument("-Vp", "--verbose-parser-source")
+        .help("Print the source locations of AST nodes.")
+        .flag();
+  };
+  void post_argument_parser(argparse::ArgumentParser &parser) override {
+    if (parser.get<bool>("-Dp"))
+      debug_parser_enabled = true;
+    if (parser.get<bool>("-Vp")) {
+      verbose_source_location = true;
+      if (!debug_parser_enabled) {
+        std::cerr << "warning: option --verbose-parser-source/-Vp is useless "
+                     "without option --debug-parser/-Dp\n";
+      }
+    }
+  };
+
+  bool on_parser (const nodle::io::SourceFile::Ptr &file,
+                  const nodle::ast::Program &program) {
+    (void) file;
+
+    if (!debug_parser_enabled) {
+      return true;
+    }
+
+    if (verbose_source_location) {
+      throw std::runtime_error("TODO");
+    } else {
+      std::cout << "AST of " << file->path().string() << ": \n";
+      std::cout << program << "\n";
+    }
+
+    return false;
+  }
+};
+
+} // namespace nodle::cli

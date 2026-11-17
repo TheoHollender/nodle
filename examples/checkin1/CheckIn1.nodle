@@ -20,17 +20,17 @@ lemma LessOrEqualIsTransitiveFour(x: int, y: int, z: int, w: int):
         use LessOrEqualIsTransitive(x, y, z);
         use LessOrEqualIsTransitive(x, z, w)
 
-lemma ZeroIsNeutral(y: int),
+lemma ZeroIsNeutral(y: int):
     prove (0 + y == y) with proof ()
 
 // ---- Functions -----------------------------------------------------------
 
-def sum(x: int, y: int) int =
+def sum(x: int, y: int): int =
     x + y
 
 // ---- Function overriding -------------------------------------------------
 
-override def sum(x: int, y: int) int =
+override def sum(x: int, y: int): int =
     such that (x == 0)
     y
 prove equivalence
@@ -39,7 +39,7 @@ prove equivalence
 // ---- Classes -------------------------------------------------------------
 
 class SortedTuple(x: int, y: int, z: int):
-    val sum, int = x + y + z
+    val sum: int = x + y + z
 
     such that (x <= y)
     such that (y <= z)

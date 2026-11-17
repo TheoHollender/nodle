@@ -30,7 +30,6 @@ result<Proposition> proposition(ParserContextPtr ptr);
 rules::ParseResult<Proof> proof(ParserContextPtr ptr);
 
 rules::ParseResult<Params> params(ParserContextPtr ptr);
-rules::ParseResult<Function> function(ParserContextPtr ptr);
 
 auto make_interior_arguments_list_rule() {
   auto argument = rules::CallRule<ptr<Expression>, expr>();
@@ -466,6 +465,141 @@ auto make_function_rule() {
   return definition | overriden;
 }
 
+auto make_such_that_rule() {
+  return (rules::TokenRule{K_SUCH} >> rules::TokenRule{K_THAT} >>
+          rules::CallRule<ptr<Proposition>, proposition>{})
+      .map<ptr<Member>>([](auto x) {
+        auto &[such, that, prop] = x;
+
+        return std::make_unique<SuchThat>(such.source_location(),
+                                          std::move(prop));
+      });
+}
+auto make_prove_with_rule() {
+  return (rules::TokenRule{K_PROVE} >>
+          rules::CallRule<ptr<Proposition>, proposition>{} >>
+          rules::TokenRule{K_WITH} >> rules::TokenRule{K_PROOF} >>
+          rules::CallRule<Proof, proof>{})
+      .map<ptr<Member>>([](auto x) {
+        auto &[prove, prop, with, prf, prf_w] = x;
+
+        return std::make_unique<Prove>(prove.source_location(), std::move(prop),
+                                       std::move(prf_w));
+      });
+}
+auto make_val_decl_rule() {
+  return (rules::TokenRule{K_VAL} >> rules::TokenRule{I_IDENTIFIER} >>
+          rules::TokenRule{D_COMMA} >> rules::CallRule<ptr<Type>, type>{})
+      .map<ptr<Member>>([](auto x) {
+        auto &[val, ident, comma, type] = x;
+
+        return std::make_unique<ValDecl>(
+            val.source_location(), std::string(ident.text()), std::move(type));
+      });
+}
+auto make_val_def_rule() {
+  return (rules::TokenRule{K_VAL} >> rules::TokenRule{I_IDENTIFIER} >>
+          rules::TokenRule{D_COMMA} >> rules::CallRule<ptr<Type>, type>{} >>
+          rules::TokenRule{D_ASSIGN} >>
+          rules::CallRule<ptr<Expression>, expr>{})
+      .map<ptr<Member>>([](auto x) {
+        auto &[val, ident, comma, type, assgn, exp] = x;
+
+        return std::make_unique<ValDef>(val.source_location(),
+                                        std::string(ident.text()),
+                                        std::move(type), std::move(exp));
+      });
+}
+auto make_class_member_rule() {
+  auto func_member = make_function_rule().map<ptr<Member>>(
+      [](auto f) { return std::make_unique<Method>(std::move(f)); });
+
+  return func_member | make_val_def_rule() | make_such_that_rule() |
+         make_prove_with_rule();
+}
+
+template <typename T> auto make_many1_rule(auto base) {
+  return (base >> (base.many())).template map<vec_ptr<T>>([](auto x) {
+    auto &[b0, bs] = x;
+    bs.insert(bs.begin(), std::move(b0));
+
+    return std::move(bs);
+  });
+}
+
+auto make_property_rule() {
+  auto requirements =
+      make_many1_rule<Member>(make_such_that_rule() | make_val_decl_rule());
+
+  return (rules::TokenRule{K_PROPERTY} >> rules::TokenRule{I_IDENTIFIER} >>
+          rules::TokenRule{D_LPAREN} >> rules::CallRule<Params, params>{} >>
+          rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COMMA} >>
+          requirements)
+      .map<ptr<Declaration>>([](auto x) {
+        auto &[kprop, ident, lparen, params, rparen, comma, reqs] = x;
+
+        ptr<PropertyDecl> prop = std::make_unique<PropertyDecl>(
+            kprop.source_location() | reqs.back()->source_location);
+        prop->name = std::string(ident.text());
+        prop->params = std::move(params);
+        prop->requirements = std::move(reqs);
+        return prop;
+      });
+}
+auto make_lemma_rule() {
+  auto statements =
+      make_many1_rule<Member>(make_such_that_rule() | make_prove_with_rule());
+
+  return (rules::TokenRule{K_LEMMA} >> rules::TokenRule{I_IDENTIFIER} >>
+          rules::TokenRule{D_LPAREN} >> rules::CallRule<Params, params>{} >>
+          rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COMMA} >> statements)
+      .map<ptr<Declaration>>([](auto x) {
+        auto &[klemma, ident, lparen, params, rparen, comma, sttms] = x;
+
+        ptr<LemmaDecl> prop = std::make_unique<LemmaDecl>(
+            klemma.source_location() | sttms.back()->source_location);
+        prop->name = std::string(ident.text());
+        prop->params = std::move(params);
+        prop->statements = std::move(sttms);
+        return prop;
+      });
+}
+auto make_class_rule() {
+  auto members = make_many1_rule<Member>(make_class_member_rule());
+
+  return (rules::TokenRule{K_CLASS} >> rules::TokenRule{I_IDENTIFIER} >>
+          rules::TokenRule{D_LPAREN} >> rules::CallRule<Params, params>{} >>
+          rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COMMA} >> members)
+      .map<ptr<Declaration>>([](auto x) {
+        auto &[kclass, ident, lparen, params, rparen, comma, membs] = x;
+
+        ptr<ClassDecl> prop = std::make_unique<ClassDecl>(
+            kclass.source_location() | membs.back()->source_location);
+        prop->name = std::string(ident.text());
+        prop->params = std::move(params);
+        prop->members = std::move(membs);
+        return prop;
+      });
+}
+
+auto make_declaration_rule() {
+  auto func_declaration = make_function_rule().map<ptr<Declaration>>(
+      [](auto x) { return std::make_unique<FunctionDecl>(std::move(x)); });
+
+  return make_property_rule() | make_lemma_rule() | make_class_rule() |
+         func_declaration;
+}
+auto make_program_rule() {
+  return make_many1_rule<Declaration>(make_declaration_rule())
+      .map<ptr<Program>>([](auto x) {
+        ptr<Program> prog =
+            std::make_unique<Program>(x.back()->source_location);
+        prog->decls = std::move(x);
+
+        return prog;
+      });
+}
+
 static const auto object_rule = make_object_rule();
 static const auto arguments_rule = make_arguments_list_rule();
 static const auto nonempty_arguments_rule = make_nonempty_arguments_list_rule();
@@ -481,7 +615,8 @@ static const auto proposition_rule = make_proposition_rule();
 static const auto proof_rule = make_proof_rule();
 
 static const auto params_rule = make_params_rule();
-static const auto function_rule = make_function_rule();
+
+static const auto program_rule = make_program_rule();
 
 result<Expression> object(ParserContextPtr ctx) {
   return object_rule.parse(ctx);
@@ -518,8 +653,23 @@ rules::ParseResult<Proof> proof(ParserContextPtr ptr) {
 rules::ParseResult<Params> params(ParserContextPtr ptr) {
   return params_rule.parse(ptr);
 }
-rules::ParseResult<Function> function(ParserContextPtr ptr) {
-  return function_rule.parse(ptr);
-}
 
 }; // namespace
+
+std::unique_ptr<nodle::ast::Program>
+nodle::parser::Parser::parse(nodle::parser::ParserContextPtr context) {
+  if (context->remaining() == 0) {
+    throw std::runtime_error("Empty program, unhandled.");
+  }
+
+  auto result = program_rule.parse(context);
+  if (!result.has_value()) {
+    throw std::runtime_error("Error on first token.");
+  }
+
+  if (context->remaining() != 0) {
+    throw std::runtime_error("Some tokens remain.");
+  }
+
+  return std::move(*result);
+}

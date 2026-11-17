@@ -22,7 +22,8 @@ struct RecordingVisitor : public Visitor {
   std::vector<std::string> visited;
 
 #define NODLE_RECORD(T)                                                        \
-  void visit(const T &) override { visited.push_back(#T); }
+  void visit(const T &) override{visited.push_back(#T);                        \
+  }
 
   NODLE_RECORD(TInteger)
   NODLE_RECORD(TFloat)

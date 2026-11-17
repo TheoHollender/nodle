@@ -1,6 +1,6 @@
 
-#include "nodle/cli/runner.hpp"
 #include "nodle/ast/printer.hpp"
+#include "nodle/cli/runner.hpp"
 
 namespace nodle::cli {
 
@@ -30,9 +30,9 @@ public:
     }
   };
 
-  bool on_parser (const nodle::io::SourceFile::Ptr &file,
-                  const nodle::ast::Program &program) {
-    (void) file;
+  bool on_parser(const nodle::io::SourceFile::Ptr &file,
+                 const nodle::ast::Program &program) {
+    (void)file;
 
     if (!debug_parser_enabled) {
       return true;

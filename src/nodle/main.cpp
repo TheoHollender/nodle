@@ -68,7 +68,8 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
-    auto context = std::make_shared<nodle::parser::ParserContext>(std::move(tokens));
+    auto context =
+        std::make_shared<nodle::parser::ParserContext>(std::move(tokens));
     auto program = parser.parse(context);
 
     for (auto &runner : runners) {
@@ -76,7 +77,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (!continue_pipeline) {
-      continue ;
+      continue;
     }
   }
 

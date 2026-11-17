@@ -21,9 +21,10 @@ namespace {
 struct RecordingVisitor : public Visitor {
   std::vector<std::string> visited;
 
-#define NODLE_RECORD(T)                                                        \
-  void visit(const T &) override{visited.push_back(#T);                        \
-  }
+  // clang-format off
+#define NODLE_RECORD(T) \
+  void visit(const T &) override{visited.push_back(#T); }
+  // clang-format on
 
   NODLE_RECORD(TInteger)
   NODLE_RECORD(TFloat)

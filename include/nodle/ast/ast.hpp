@@ -183,7 +183,7 @@ struct Use : public Node {
   vec_ptr<Expression> args;
 };
 
-using Proof = std::vector<Use>;
+using Proof = vec_ptr<Use>;
 
 // Function
 struct Param : public Node {
@@ -223,7 +223,7 @@ struct Prove : public Member {
   Prove(io::SourceLocation prove_tok, std::unique_ptr<Proposition> goal,
         Proof proof)
       : Member(prove_tok | (proof.empty() ? goal->source_location
-                                          : proof.back().source_location)),
+                                          : proof.back()->source_location)),
         goal(std::move(goal)), proof(std::move(proof)) {}
   std::unique_ptr<Proposition> goal;
   Proof proof;

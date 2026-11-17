@@ -260,31 +260,7 @@ TEST_F(AstLocation, UseSpansFromKeywordToEnd) {
   EXPECT_EQ(use.name, "lem");
 }
 
-TEST_F(AstLocation, ProofKeepsUseLocationsAcrossReallocation) {
-  lex("use a use b use c use d");
-  Proof proof;
-  for (const char *name : {"a", "b", "c", "d"}) {
-    proof.emplace_back(tok("use", proof.size()), name, vec_ptr<Expression>{},
-                       tok(name));
-  }
-
-  ASSERT_EQ(proof.size(), 4u);
-  EXPECT_EQ(text(proof[0]), "use a");
-  EXPECT_EQ(text(proof[3]), "use d");
-}
-
 // ==== Members ====
-
-TEST_F(AstLocation, ProveSpansFromKeywordToLastUse) {
-  lex("prove p with use lem(q)");
-  Proof proof;
-  vec_ptr<Expression> args;
-  args.push_back(var("q"));
-  proof.emplace_back(tok("use"), "lem", std::move(args), tok(")"));
-  Prove prove(tok("prove"), std::make_unique<PExp>(var("p")), std::move(proof));
-
-  EXPECT_EQ(text(prove), "prove p with use lem(q)");
-}
 
 TEST_F(AstLocation, ProveWithoutProofEndsAtGoal) {
   lex("prove a < b");

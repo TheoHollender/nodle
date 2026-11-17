@@ -386,6 +386,40 @@ auto make_proof_rule() {
   });
 }
 
+auto make_params_rule() {
+  auto basic = (rules::TokenRule{I_IDENTIFIER} >> rules::TokenRule{D_COLON} >>
+                rules::CallRule<ptr<Type>, type>{})
+                   .map<ptr<Param>>([](auto x) {
+                     auto ident = std::get<0>(x);
+                     auto type = std::move(std::get<2>(x));
+
+                     return std::make_unique<Param>(ident.source_location(),
+                                                    std::string(ident.text()),
+                                                    std::move(type));
+                   });
+
+  auto rest =
+      (rules::TokenRule{D_COMMA} >> basic)
+          .map<ptr<Param>>([](auto x) { return std::move(std::get<1>(x)); })
+          .many();
+
+  return (~(basic >> rest)).map<Params>([](auto x) {
+    Params res;
+
+    if (x.has_value()) {
+      auto &xv = x.value();
+
+      res.push_back(std::move(std::get<0>(xv)));
+
+      for (auto &xve : std::get<1>(xv)) {
+        res.push_back(std::move(xve));
+      }
+    }
+
+    return res;
+  });
+}
+
 static const auto object_rule = make_object_rule();
 static const auto arguments_rule = make_arguments_list_rule();
 static const auto nonempty_arguments_rule = make_nonempty_arguments_list_rule();
@@ -399,6 +433,8 @@ static const auto expr_rule = make_expr_rule();
 static const auto type_rule = make_type_rule();
 static const auto proposition_rule = make_proposition_rule();
 static const auto proof_rule = make_proof_rule();
+
+static const auto params_rule = make_params_rule();
 
 result<Expression> object(ParserContextPtr ctx) {
   return object_rule.parse(ctx);
@@ -430,6 +466,10 @@ result<Proposition> proposition(ParserContextPtr ptr) {
 }
 rules::ParseResult<Proof> proof(ParserContextPtr ptr) {
   return proof_rule.parse(ptr);
+}
+
+rules::ParseResult<Params> params(ParserContextPtr ptr) {
+  return params_rule.parse(ptr);
 }
 
 }; // namespace

@@ -303,7 +303,7 @@ auto make_type_rule() {
       auto &first = std::get<1>(x);
       auto &second = std::get<2>(x);
 
-      if (!second.has_value()) {
+      if (!second.has_value() || second->empty()) {
         first->extend(lparen.source_location());
         first->extend(rparen.source_location());
 
@@ -429,12 +429,12 @@ auto make_function_rule() {
   auto definition =
       (rules::TokenRule{K_DEF} >> rules::TokenRule{I_IDENTIFIER} >>
        rules::TokenRule{D_LPAREN} >> rules::CallRule<Params, params>{} >>
-       rules::TokenRule{D_RPAREN} >> rules::CallRule<ptr<Type>, type>{} >>
-       rules::TokenRule{D_ASSIGN} >> props >>
-       rules::CallRule<ptr<Expression>, expr>{})
+       rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COLON} >>
+       rules::CallRule<ptr<Type>, type>{} >> rules::TokenRule{D_ASSIGN} >>
+       props >> rules::CallRule<ptr<Expression>, expr>{})
           .map<Function>([](auto x) {
-            auto &[def, ident, lparen, params, rparen, rett, assgn, such, e] =
-                x;
+            auto &[def, ident, lparen, params, rparen, colon, rett, assgn, such,
+                   e] = x;
 
             Function f(def.source_location() | e->source_location);
             f.body = std::move(e);
@@ -458,6 +458,7 @@ auto make_function_rule() {
             for (auto &use : prf) {
               func.extend(use->source_location);
             }
+            func.is_override = true;
             func.equivalence = {std::move(prf)};
             return std::move(func);
           });
@@ -489,7 +490,7 @@ auto make_prove_with_rule() {
 }
 auto make_val_decl_rule() {
   return (rules::TokenRule{K_VAL} >> rules::TokenRule{I_IDENTIFIER} >>
-          rules::TokenRule{D_COMMA} >> rules::CallRule<ptr<Type>, type>{})
+          rules::TokenRule{D_COLON} >> rules::CallRule<ptr<Type>, type>{})
       .map<ptr<Member>>([](auto x) {
         auto &[val, ident, comma, type] = x;
 
@@ -499,7 +500,7 @@ auto make_val_decl_rule() {
 }
 auto make_val_def_rule() {
   return (rules::TokenRule{K_VAL} >> rules::TokenRule{I_IDENTIFIER} >>
-          rules::TokenRule{D_COMMA} >> rules::CallRule<ptr<Type>, type>{} >>
+          rules::TokenRule{D_COLON} >> rules::CallRule<ptr<Type>, type>{} >>
           rules::TokenRule{D_ASSIGN} >>
           rules::CallRule<ptr<Expression>, expr>{})
       .map<ptr<Member>>([](auto x) {
@@ -511,8 +512,10 @@ auto make_val_def_rule() {
       });
 }
 auto make_class_member_rule() {
-  auto func_member = make_function_rule().map<ptr<Member>>(
-      [](auto f) { return std::make_unique<Method>(std::move(f)); });
+  auto func_member = (
+    rules::TokenRule{K_METHOD} >> make_function_rule()
+  ).map<ptr<Member>>(
+      [](auto f) { return std::make_unique<Method>(std::move(std::get<1>(f))); });
 
   return func_member | make_val_def_rule() | make_such_that_rule() |
          make_prove_with_rule();
@@ -533,7 +536,7 @@ auto make_property_rule() {
 
   return (rules::TokenRule{K_PROPERTY} >> rules::TokenRule{I_IDENTIFIER} >>
           rules::TokenRule{D_LPAREN} >> rules::CallRule<Params, params>{} >>
-          rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COMMA} >>
+          rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COLON} >>
           requirements)
       .map<ptr<Declaration>>([](auto x) {
         auto &[kprop, ident, lparen, params, rparen, comma, reqs] = x;
@@ -552,7 +555,7 @@ auto make_lemma_rule() {
 
   return (rules::TokenRule{K_LEMMA} >> rules::TokenRule{I_IDENTIFIER} >>
           rules::TokenRule{D_LPAREN} >> rules::CallRule<Params, params>{} >>
-          rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COMMA} >> statements)
+          rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COLON} >> statements)
       .map<ptr<Declaration>>([](auto x) {
         auto &[klemma, ident, lparen, params, rparen, comma, sttms] = x;
 
@@ -569,7 +572,7 @@ auto make_class_rule() {
 
   return (rules::TokenRule{K_CLASS} >> rules::TokenRule{I_IDENTIFIER} >>
           rules::TokenRule{D_LPAREN} >> rules::CallRule<Params, params>{} >>
-          rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COMMA} >> members)
+          rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COLON} >> members)
       .map<ptr<Declaration>>([](auto x) {
         auto &[kclass, ident, lparen, params, rparen, comma, membs] = x;
 

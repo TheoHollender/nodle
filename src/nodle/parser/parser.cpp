@@ -512,10 +512,11 @@ auto make_val_def_rule() {
       });
 }
 auto make_class_member_rule() {
-  auto func_member = (
-    rules::TokenRule{K_METHOD} >> make_function_rule()
-  ).map<ptr<Member>>(
-      [](auto f) { return std::make_unique<Method>(std::move(std::get<1>(f))); });
+  auto func_member =
+      (rules::TokenRule{K_METHOD} >> make_function_rule())
+          .map<ptr<Member>>([](auto f) {
+            return std::make_unique<Method>(std::move(std::get<1>(f)));
+          });
 
   return func_member | make_val_def_rule() | make_such_that_rule() |
          make_prove_with_rule();

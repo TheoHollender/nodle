@@ -276,10 +276,9 @@ TEST(ParserClass, Method) {
 }
 
 TEST(ParserClass, OverrideMethod) {
-  EXPECT_EQ(
-      program_of(
-          "class C() : method override def f() : Integer = 1 prove equivalence ()"),
-      "(class C () (method (override-def f () Integer [] 1 equiv [])))");
+  EXPECT_EQ(program_of("class C() : method override def f() : Integer = 1 "
+                       "prove equivalence ()"),
+            "(class C () (method (override-def f () Integer [] 1 equiv [])))");
 }
 
 TEST(ParserClass, Statements) {
@@ -303,10 +302,12 @@ TEST(ParserClass, ParametersAndSeveralMembers) {
 }
 
 TEST(ParserClass, MethodBodyEndsBeforeTheNextMember) {
-  EXPECT_EQ(program_of("class C() : method def f() : Integer = x val y : Integer = 2"),
+  EXPECT_EQ(program_of(
+                "class C() : method def f() : Integer = x val y : Integer = 2"),
             "(class C () (method (def f () Integer [] x)) (val y Integer 2))");
   EXPECT_EQ(
-      program_of("class C() : method def f() : Integer = x method def g() : Integer = y"),
+      program_of("class C() : method def f() : Integer = x method def g() : "
+                 "Integer = y"),
       "(class C () (method (def f () Integer [] x)) (method (def g () Integer "
       "[] y)))");
 }

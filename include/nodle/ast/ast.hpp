@@ -1,10 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "nodle/ast/ast_visitor.hpp"
 #include "nodle/io/location.hpp"
 
 namespace nodle::ast {
@@ -23,6 +25,11 @@ struct Node {
     source_location = source_location | loc;
   }
 
+  /**
+   * Calls the `visit` overload of `visitor` that matches this node's type.
+   */
+  virtual void accept(Visitor &visitor) const = 0;
+
   io::SourceLocation source_location;
 };
 
@@ -33,24 +40,34 @@ struct Type : public Node {
 
 struct TInteger : public Type {
   using Type::Type;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 struct TFloat : public Type {
   using Type::Type;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 struct TBoolean : public Type {
   using Type::Type;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 struct TTuple : public Type {
   TTuple(io::SourceLocation lparen, vec_ptr<Type> values,
          io::SourceLocation rparen)
       : Type(lparen | rparen), values(std::move(values)) {}
   vec_ptr<Type> values;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct TNamed : public Type {
   TNamed(io::SourceLocation tok, std::string name)
       : Type(std::move(tok)), name(std::move(name)) {}
   std::string name;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 // Expression
@@ -62,24 +79,32 @@ struct EInteger : public Expression {
   EInteger(io::SourceLocation tok, long long value)
       : Expression(std::move(tok)), value(value) {}
   long long value;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct EFloat : public Expression {
   EFloat(io::SourceLocation tok, double value)
       : Expression(std::move(tok)), value(value) {}
   double value;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct EBool : public Expression {
   EBool(io::SourceLocation tok, bool value)
       : Expression(std::move(tok)), value(value) {}
   bool value;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct Var : public Expression {
   Var(io::SourceLocation tok, std::string name)
       : Expression(std::move(tok)), name(std::move(name)) {}
   std::string name;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct ETuple : public Expression {
@@ -87,10 +112,14 @@ struct ETuple : public Expression {
          io::SourceLocation rparen)
       : Expression(lparen | rparen), values(std::move(values)) {}
   vec_ptr<Expression> values;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct Self : public Expression {
   using Expression::Expression;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 enum class BinOp {
@@ -117,12 +146,16 @@ struct EBinOp : public Expression {
         lhs(std::move(lhs)), rhs(std::move(rhs)) {}
   BinOp op;
   std::unique_ptr<Expression> lhs, rhs;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct Not : public Expression {
   Not(io::SourceLocation not_tok, std::unique_ptr<Expression> exp)
       : Expression(not_tok | exp->source_location), exp(std::move(exp)) {}
   std::unique_ptr<Expression> exp;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct If : public Expression {
@@ -133,6 +166,8 @@ struct If : public Expression {
         cond(std::move(cond)), then_branch(std::move(then_branch)),
         else_branch(std::move(else_branch)) {}
   std::unique_ptr<Expression> cond, then_branch, else_branch;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct FieldAccess : public Expression {
@@ -142,6 +177,8 @@ struct FieldAccess : public Expression {
         object(std::move(object)), field(std::move(field)) {}
   std::unique_ptr<Expression> object;
   std::string field;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct Call : public Expression {
@@ -151,6 +188,8 @@ struct Call : public Expression {
         args(std::move(args)) {}
   std::unique_ptr<Expression> object;
   vec_ptr<Expression> args;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 // Proposition
@@ -162,6 +201,8 @@ struct PExp : public Proposition {
   explicit PExp(std::unique_ptr<Expression> exp)
       : Proposition(exp->source_location), exp(std::move(exp)) {}
   std::unique_ptr<Expression> exp;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct PFollows : public Proposition {
@@ -172,6 +213,8 @@ struct PFollows : public Proposition {
   std::unique_ptr<Expression> e0;
   std::string property;
   vec_ptr<Expression> args;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 // Proof
@@ -181,6 +224,8 @@ struct Use : public Node {
       : Node(use_tok | end), name(std::move(name)), args(std::move(args)) {}
   std::string name;
   vec_ptr<Expression> args;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 using Proof = vec_ptr<Use>;
@@ -193,6 +238,8 @@ struct Param : public Node {
         type(std::move(type)) {}
   std::string name;
   std::unique_ptr<Type> type;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 using Params = vec_ptr<Param>;
@@ -207,6 +254,8 @@ struct Function : public Node {
   bool is_override = false;
   vec_ptr<Proposition> conditions;
   std::optional<Proof> equivalence;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 // Member and Statement
@@ -218,6 +267,8 @@ struct SuchThat : public Member {
   SuchThat(io::SourceLocation such_tok, std::unique_ptr<Proposition> prop)
       : Member(such_tok | prop->source_location), prop(std::move(prop)) {}
   std::unique_ptr<Proposition> prop;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 struct Prove : public Member {
   Prove(io::SourceLocation prove_tok, std::unique_ptr<Proposition> goal,
@@ -227,6 +278,8 @@ struct Prove : public Member {
         goal(std::move(goal)), proof(std::move(proof)) {}
   std::unique_ptr<Proposition> goal;
   Proof proof;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 struct ValDecl : public Member {
   ValDecl(io::SourceLocation val_tok, std::string name,
@@ -235,6 +288,8 @@ struct ValDecl : public Member {
         type(std::move(type)) {}
   std::string name;
   std::unique_ptr<Type> type;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 struct ValDef : public Member {
   ValDef(io::SourceLocation val_tok, std::string name,
@@ -244,11 +299,15 @@ struct ValDef : public Member {
   std::string name;
   std::unique_ptr<Type> type;
   std::unique_ptr<Expression> value;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 struct Method : public Member {
   explicit Method(Function fn)
       : Member(fn.source_location), fn(std::move(fn)) {}
   Function fn;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 // Graph components
@@ -260,6 +319,8 @@ struct StateComponent : public Node {
   std::unique_ptr<Expression> lower;
   std::string var;
   std::unique_ptr<Expression> upper;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct Edge : public Node {
@@ -270,6 +331,8 @@ struct Edge : public Node {
         source(std::move(source)), target(std::move(target)),
         weight(std::move(weight)) {}
   std::unique_ptr<Expression> source, target, weight;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 // Declaration
@@ -282,6 +345,8 @@ struct PropertyDecl : public Declaration {
   std::string name;
   Params params;
   vec_ptr<Member> requirements;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct LemmaDecl : public Declaration {
@@ -289,6 +354,8 @@ struct LemmaDecl : public Declaration {
   std::string name;
   Params params;
   vec_ptr<Member> statements;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct ClassDecl : public Declaration {
@@ -296,6 +363,8 @@ struct ClassDecl : public Declaration {
   std::string name;
   Params params;
   vec_ptr<Member> members;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct GraphDecl : public Declaration {
@@ -306,18 +375,24 @@ struct GraphDecl : public Declaration {
   vec_ptr<Type> weight;
   vec_ptr<Edge> edges;
   vec_ptr<Member> members;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 struct FunctionDecl : public Declaration {
   explicit FunctionDecl(Function fn)
       : Declaration(fn.source_location), fn(std::move(fn)) {}
   Function fn;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 // Program
 struct Program : public Node {
   using Node::Node;
   vec_ptr<Declaration> decls;
+
+  void accept(Visitor &visitor) const override { visitor.visit(*this); }
 };
 
 } // namespace nodle::ast

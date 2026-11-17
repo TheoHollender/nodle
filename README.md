@@ -34,10 +34,12 @@ Run the compiler on one or more `.nodle` files:
 ./build/nodle examples/hw/HelloWorld.nodle
 ./build/nodle --debug-lexer examples/hw/HelloWorld.nodle        # print the token stream
 ./build/nodle -Dl --verbose-lexer-source examples/hw/HelloWorld.nodle  # also print source locations
+./build/nodle --debug-parser examples/hw/HelloWorld.nodle        # print the AST
+./build/nodle -Dp --verbose-parser-source examples/hw/HelloWorld.nodle # print the AST with the source locations
 ./build/nodle --help
 ```
 
-For now, the command-line tool only runs the lexer. Without `--debug-lexer` it
+For now, the command-line tool only runs the lexer and parser. Without `--debug-lexer` or `--debug-parser` it
 prints nothing and exits with status 0 if the file was read successfully.
 
 With Nix, `nix build` builds the compiler into `./result/bin/nodle`,

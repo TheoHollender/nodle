@@ -24,12 +24,12 @@ result<Expression> expr_addition(ParserContextPtr ptr);
 result<Expression> expr_comparison(ParserContextPtr ptr);
 result<Expression> expr_bool(ParserContextPtr ptr);
 result<Expression> expr(ParserContextPtr ptr);
- 
-result<Type> type(ParserContextPtr ptr);
-result<Proposition> proposition (ParserContextPtr ptr);
-rules::ParseResult<Proof> proof (ParserContextPtr ptr);
 
-rules::ParseResult<Params> params (ParserContextPtr ptr);
+result<Type> type(ParserContextPtr ptr);
+result<Proposition> proposition(ParserContextPtr ptr);
+rules::ParseResult<Proof> proof(ParserContextPtr ptr);
+
+rules::ParseResult<Params> params(ParserContextPtr ptr);
 
 auto make_interior_arguments_list_rule() {
   auto argument = rules::CallRule<ptr<Expression>, expr>();
@@ -278,18 +278,23 @@ auto make_expr_rule() {
   return iff_expr | rules::CallRule<ptr<Expression>, expr_bool>{};
 }
 
-auto make_type_rule () {
-  auto int_type = rules::TokenRule{K_INT}.map<ptr<Type>>([](auto x) { return std::make_unique<TInteger>(x.source_location()); });
-  auto float_type = rules::TokenRule{K_FLOAT}.map<ptr<Type>>([](auto x) { return std::make_unique<TFloat>(x.source_location()); });
-  auto bool_type = rules::TokenRule{K_BOOL}.map<ptr<Type>>([](auto x) { return std::make_unique<TBoolean>(x.source_location()); });
+auto make_type_rule() {
+  auto int_type = rules::TokenRule{K_INT}.map<ptr<Type>>(
+      [](auto x) { return std::make_unique<TInteger>(x.source_location()); });
+  auto float_type = rules::TokenRule{K_FLOAT}.map<ptr<Type>>(
+      [](auto x) { return std::make_unique<TFloat>(x.source_location()); });
+  auto bool_type = rules::TokenRule{K_BOOL}.map<ptr<Type>>(
+      [](auto x) { return std::make_unique<TBoolean>(x.source_location()); });
 
   auto tuple_type = ([]() {
     auto base = rules::CallRule<ptr<Type>, type>{};
-    auto secd = (rules::TokenRule{D_COMMA} >> base).map<ptr<Type>>([](auto comma_type) {
-      return std::move(std::get<1>(comma_type));
-    });
+    auto secd =
+        (rules::TokenRule{D_COMMA} >> base).map<ptr<Type>>([](auto comma_type) {
+          return std::move(std::get<1>(comma_type));
+        });
 
-    auto full = rules::TokenRule{D_LPAREN} >> base >> ~(secd.many()) >> rules::TokenRule{D_RPAREN};
+    auto full = rules::TokenRule{D_LPAREN} >> base >> ~(secd.many()) >>
+                rules::TokenRule{D_RPAREN};
 
     return full.map<ptr<Type>>([](auto x) -> ptr<Type> {
       Token lparen = std::get<0>(x);
@@ -312,27 +317,25 @@ auto make_type_rule () {
       }
 
       return std::make_unique<TTuple>(
-        lparen.source_location(),
-        std::move(types),
-        rparen.source_location()
-      );
+          lparen.source_location(), std::move(types), rparen.source_location());
     });
   })();
 
-  auto named_type = rules::TokenRule{I_IDENTIFIER}.map<ptr<Type>>([](Token tok) {
-    return std::make_unique<TNamed>(tok.source_location(), std::string(tok.text()));
-  });
+  auto named_type =
+      rules::TokenRule{I_IDENTIFIER}.map<ptr<Type>>([](Token tok) {
+        return std::make_unique<TNamed>(tok.source_location(),
+                                        std::string(tok.text()));
+      });
 
   return int_type | float_type | bool_type | tuple_type | named_type;
 }
 
-auto make_proposition_rule () {
-  auto basic = rules::CallRule<ptr<Expression>, expr>{}
-    >> ~(
-      rules::TokenRule{K_FOLLOWS} >> rules::TokenRule{I_IDENTIFIER}
-      >> rules::CallRule<ArgumentsList, arguments>{}
-    );
-  
+auto make_proposition_rule() {
+  auto basic =
+      rules::CallRule<ptr<Expression>, expr>{} >>
+      ~(rules::TokenRule{K_FOLLOWS} >> rules::TokenRule{I_IDENTIFIER} >>
+        rules::CallRule<ArgumentsList, arguments>{});
+
   return basic.map<ptr<Proposition>>([](auto x) -> ptr<Proposition> {
     auto expr = std::move(std::get<0>(x));
     auto opt_rhs = std::move(std::get<1>(x));
@@ -342,32 +345,31 @@ auto make_proposition_rule () {
     }
 
     auto rhs = std::move(opt_rhs.value());
-    
+
     return std::make_unique<PFollows>(
-      std::move(expr),
-      std::string(std::get<1>(rhs).text()),
-      std::move(std::get<3>(rhs)),
-      std::get<4>(rhs).source_location()
-    );
+        std::move(expr), std::string(std::get<1>(rhs).text()),
+        std::move(std::get<3>(rhs)), std::get<4>(rhs).source_location());
   });
 }
-auto make_proof_rule () {
+auto make_proof_rule() {
   auto basic = (rules::TokenRule{D_LPAREN} >> rules::TokenRule{D_RPAREN})
-    .map<nodle::io::SourceLocation>([](auto x) { return std::get<1>(x).source_location(); })
-    | (rules::TokenRule{K_USE} >> rules::TokenRule{I_IDENTIFIER} >> rules::CallRule<ArgumentsList, arguments>{})
-    .map<ptr<Use>>([](auto content) {
-      auto use_tok = std::get<0>(content).source_location();
-      auto name = std::get<1>(content).text();
-      auto &expr = std::get<3>(content);
-      auto rparen = std::get<4>(content).source_location();
+                   .map<nodle::io::SourceLocation>([](auto x) {
+                     return std::get<1>(x).source_location();
+                   }) |
+               (rules::TokenRule{K_USE} >> rules::TokenRule{I_IDENTIFIER} >>
+                rules::CallRule<ArgumentsList, arguments>{})
+                   .map<ptr<Use>>([](auto content) {
+                     auto use_tok = std::get<0>(content).source_location();
+                     auto name = std::get<1>(content).text();
+                     auto &expr = std::get<3>(content);
+                     auto rparen = std::get<4>(content).source_location();
 
-      return std::make_unique<Use>(use_tok, std::string(name), std::move(expr), rparen);
-    });
-  auto rest = (rules::TokenRule{D_SEMICOLON} >> basic).map<
-    std::variant<nodle::io::SourceLocation, ptr<Use>>
-  >([](auto x) {
-    return std::move(std::get<1>(x));
-  });
+                     return std::make_unique<Use>(use_tok, std::string(name),
+                                                  std::move(expr), rparen);
+                   });
+  auto rest = (rules::TokenRule{D_SEMICOLON} >> basic)
+                  .map<std::variant<nodle::io::SourceLocation, ptr<Use>>>(
+                      [](auto x) { return std::move(std::get<1>(x)); });
 
   return (basic >> rest.many()).map<Proof>([](auto x) {
     auto &rhs = std::get<1>(x);
@@ -422,13 +424,11 @@ result<Expression> expr_bool(ParserContextPtr ctx) {
 }
 result<Expression> expr(ParserContextPtr ctx) { return expr_rule.parse(ctx); }
 
-result<Type> type (ParserContextPtr ctx) {
-  return type_rule.parse(ctx);
-}
-result<Proposition> proposition (ParserContextPtr ptr) {
+result<Type> type(ParserContextPtr ctx) { return type_rule.parse(ctx); }
+result<Proposition> proposition(ParserContextPtr ptr) {
   return proposition_rule.parse(ptr);
 }
-rules::ParseResult<Proof> proof (ParserContextPtr ptr) {
+rules::ParseResult<Proof> proof(ParserContextPtr ptr) {
   return proof_rule.parse(ptr);
 }
 

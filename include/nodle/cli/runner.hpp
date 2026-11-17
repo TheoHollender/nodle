@@ -1,5 +1,6 @@
 
 #pragma once
+#include "nodle/ast/ast.hpp"
 #include "nodle/io/file.hpp"
 #include "nodle/io/location.hpp"
 #include "nodle/lexer/lexer.hpp"
@@ -40,6 +41,20 @@ struct RunnerCLI {
     (void)tokens;
     return true;
   };
+
+  /**
+   * Called when the parser phase is done for a given file.
+   *
+   * @param file the source file of the program AST
+   * @param program the program AST
+   * @return whether the pipeline may continue.
+   */
+  virtual bool on_parser(const nodle::io::SourceFile::Ptr &file,
+                         const nodle::ast::Program &program) {
+    (void)file;
+    (void)program;
+    return true;
+  }
 };
 
 }; // namespace nodle::cli

@@ -5,12 +5,15 @@
 
 #include "nodle/io/file.hpp"
 #include "nodle/lexer/lexer.hpp"
+#include "nodle/parser/parser.hpp"
 
 #include "nodle/cli/debug_lexer.hpp"
+#include "nodle/cli/debug_parser.hpp"
 #include "nodle/cli/runner.hpp"
 
 std::vector<std::shared_ptr<nodle::cli::RunnerCLI>> runners = {
-    std::make_shared<nodle::cli::DebugLexerCLI>()};
+    std::make_shared<nodle::cli::DebugLexerCLI>(),
+    std::make_shared<nodle::cli::DebugParserCLI>()};
 
 int main(int argc, char *argv[]) {
   argparse::ArgumentParser program("Nodle", "1.0.0");
@@ -50,6 +53,7 @@ int main(int argc, char *argv[]) {
   }
 
   nodle::lexer::Lexer lexer;
+  nodle::parser::Parser parser;
 
   for (const nodle::io::SourceFile::Ptr &file : files) {
     auto tokens = lexer.lex(file);
@@ -58,6 +62,18 @@ int main(int argc, char *argv[]) {
 
     for (auto &runner : runners) {
       continue_pipeline &= runner->on_lexer(file, tokens);
+    }
+
+    if (!continue_pipeline) {
+      continue;
+    }
+
+    auto context =
+        std::make_shared<nodle::parser::ParserContext>(std::move(tokens));
+    auto program = parser.parse(context);
+
+    for (auto &runner : runners) {
+      continue_pipeline &= runner->on_parser(file, *program);
     }
 
     if (!continue_pipeline) {

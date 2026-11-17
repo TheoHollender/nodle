@@ -206,7 +206,7 @@ struct Function : public Node {
 
   bool is_override = false;
   vec_ptr<Proposition> conditions;
-  Proof equivalence;
+  std::optional<Proof> equivalence;
 };
 
 // Member and Statement

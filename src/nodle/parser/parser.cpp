@@ -30,6 +30,7 @@ result<Proposition> proposition(ParserContextPtr ptr);
 rules::ParseResult<Proof> proof(ParserContextPtr ptr);
 
 rules::ParseResult<Params> params(ParserContextPtr ptr);
+rules::ParseResult<Function> function(ParserContextPtr ptr);
 
 auto make_interior_arguments_list_rule() {
   auto argument = rules::CallRule<ptr<Expression>, expr>();
@@ -420,6 +421,51 @@ auto make_params_rule() {
   });
 }
 
+auto make_function_rule() {
+  auto props = (rules::TokenRule{K_SUCH} >> rules::TokenRule{K_THAT} >>
+                rules::CallRule<ptr<Proposition>, proposition>{})
+                   .map<ptr<Proposition>>(
+                       [](auto x) { return std::move(std::get<2>(x)); })
+                   .many();
+  auto definition =
+      (rules::TokenRule{K_DEF} >> rules::TokenRule{I_IDENTIFIER} >>
+       rules::TokenRule{D_LPAREN} >> rules::CallRule<Params, params>{} >>
+       rules::TokenRule{D_RPAREN} >> rules::CallRule<ptr<Type>, type>{} >>
+       rules::TokenRule{D_ASSIGN} >> props >>
+       rules::CallRule<ptr<Expression>, expr>{})
+          .map<Function>([](auto x) {
+            auto &[def, ident, lparen, params, rparen, rett, assgn, such, e] =
+                x;
+
+            Function f(def.source_location() | e->source_location);
+            f.body = std::move(e);
+            f.conditions = std::move(such);
+            f.equivalence = {};
+            f.is_override = false;
+            f.name = std::string(ident.text());
+            f.params = std::move(params);
+            f.return_type = std::move(rett);
+            return f;
+          });
+
+  auto overriden =
+      (rules::TokenRule{K_OVERRIDE} >> definition >>
+       rules::TokenRule{K_PROVE} >> rules::TokenRule{K_EQUIVALENCE} >>
+       rules::CallRule<Proof, proof>{})
+          .map<Function>([](auto x) {
+            auto &[override, func, prove, equi, prf] = x;
+            func.extend(override.source_location());
+            func.extend(equi.source_location());
+            for (auto &use : prf) {
+              func.extend(use->source_location);
+            }
+            func.equivalence = {std::move(prf)};
+            return std::move(func);
+          });
+
+  return definition | overriden;
+}
+
 static const auto object_rule = make_object_rule();
 static const auto arguments_rule = make_arguments_list_rule();
 static const auto nonempty_arguments_rule = make_nonempty_arguments_list_rule();
@@ -435,6 +481,7 @@ static const auto proposition_rule = make_proposition_rule();
 static const auto proof_rule = make_proof_rule();
 
 static const auto params_rule = make_params_rule();
+static const auto function_rule = make_function_rule();
 
 result<Expression> object(ParserContextPtr ctx) {
   return object_rule.parse(ctx);
@@ -470,6 +517,9 @@ rules::ParseResult<Proof> proof(ParserContextPtr ptr) {
 
 rules::ParseResult<Params> params(ParserContextPtr ptr) {
   return params_rule.parse(ptr);
+}
+rules::ParseResult<Function> function(ParserContextPtr ptr) {
+  return function_rule.parse(ptr);
 }
 
 }; // namespace

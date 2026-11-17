@@ -30,7 +30,6 @@ result<Proposition> proposition(ParserContextPtr ptr);
 rules::ParseResult<Proof> proof(ParserContextPtr ptr);
 
 rules::ParseResult<Params> params(ParserContextPtr ptr);
-rules::ParseResult<Function> function(ParserContextPtr ptr);
 
 auto make_interior_arguments_list_rule() {
   auto argument = rules::CallRule<ptr<Expression>, expr>();
@@ -616,7 +615,6 @@ static const auto proposition_rule = make_proposition_rule();
 static const auto proof_rule = make_proof_rule();
 
 static const auto params_rule = make_params_rule();
-static const auto function_rule = make_function_rule();
 
 static const auto program_rule = make_program_rule();
 
@@ -654,9 +652,6 @@ rules::ParseResult<Proof> proof(ParserContextPtr ptr) {
 
 rules::ParseResult<Params> params(ParserContextPtr ptr) {
   return params_rule.parse(ptr);
-}
-rules::ParseResult<Function> function(ParserContextPtr ptr) {
-  return function_rule.parse(ptr);
 }
 
 }; // namespace

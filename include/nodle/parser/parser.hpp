@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "nodle/ast/ast.hpp"
 #include "nodle/parser/context.hpp"
 #include "nodle/parser/rules/basic.hpp"
 #include "nodle/parser/rules/call.hpp"

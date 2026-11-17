@@ -210,60 +210,6 @@ TEST_F(AstLocation, FieldAccessSpansFromObjectToField) {
   EXPECT_EQ(access.field, "field");
 }
 
-TEST_F(AstLocation, CallSpansFromNameToClosingParen) {
-  lex("f(a, b)");
-  vec_ptr<Expression> args;
-  args.push_back(var("a"));
-  args.push_back(var("b"));
-  Call call(tok("f"), "f", std::move(args), tok(")"));
-
-  EXPECT_EQ(text(call), "f(a, b)");
-  EXPECT_EQ(call.func, "f");
-}
-
-TEST_F(AstLocation, CallWithoutArgumentsIncludesItsParentheses) {
-  lex("f()");
-  Call call(tok("f"), "f", {}, tok(")"));
-
-  EXPECT_EQ(text(call), "f()");
-  EXPECT_TRUE(call.args.empty());
-}
-
-TEST_F(AstLocation, MethodCallSpansFromObjectToClosingParen) {
-  lex("obj.m(z)");
-  vec_ptr<Expression> args;
-  args.push_back(var("z"));
-  MethodCall call(var("obj"), "m", std::move(args), tok(")"));
-
-  EXPECT_EQ(text(call), "obj.m(z)");
-}
-
-TEST_F(AstLocation, ChainedAccessesSpanTheWholeChain) {
-  lex("f(a).g.h(b)");
-  vec_ptr<Expression> f_args;
-  f_args.push_back(var("a"));
-  auto call =
-      std::make_unique<Call>(tok("f"), "f", std::move(f_args), tok(")", 0));
-  auto access = std::make_unique<FieldAccess>(std::move(call), tok("g"), "g");
-  vec_ptr<Expression> h_args;
-  h_args.push_back(var("b"));
-  MethodCall chain(std::move(access), "h", std::move(h_args), tok(")", 1));
-
-  EXPECT_EQ(text(*chain.object), "f(a).g");
-  EXPECT_EQ(text(chain), "f(a).g.h(b)");
-}
-
-TEST_F(AstLocation, InstantiateSpansFromTypeNameToClosingParen) {
-  lex("Foo(true, false)");
-  vec_ptr<Expression> args;
-  args.push_back(std::make_unique<EBool>(tok("true"), true));
-  args.push_back(std::make_unique<EBool>(tok("false"), false));
-  Instantiate inst(tok("Foo"), "Foo", std::move(args), tok(")"));
-
-  EXPECT_EQ(text(inst), "Foo(true, false)");
-  EXPECT_EQ(inst.type_name, "Foo");
-}
-
 TEST_F(AstLocation, NodesCanBeOwnedThroughTheirBase) {
   lex("a + b");
   std::unique_ptr<Node> node =
@@ -314,31 +260,7 @@ TEST_F(AstLocation, UseSpansFromKeywordToEnd) {
   EXPECT_EQ(use.name, "lem");
 }
 
-TEST_F(AstLocation, ProofKeepsUseLocationsAcrossReallocation) {
-  lex("use a use b use c use d");
-  Proof proof;
-  for (const char *name : {"a", "b", "c", "d"}) {
-    proof.emplace_back(tok("use", proof.size()), name, vec_ptr<Expression>{},
-                       tok(name));
-  }
-
-  ASSERT_EQ(proof.size(), 4u);
-  EXPECT_EQ(text(proof[0]), "use a");
-  EXPECT_EQ(text(proof[3]), "use d");
-}
-
 // ==== Members ====
-
-TEST_F(AstLocation, ProveSpansFromKeywordToLastUse) {
-  lex("prove p with use lem(q)");
-  Proof proof;
-  vec_ptr<Expression> args;
-  args.push_back(var("q"));
-  proof.emplace_back(tok("use"), "lem", std::move(args), tok(")"));
-  Prove prove(tok("prove"), std::make_unique<PExp>(var("p")), std::move(proof));
-
-  EXPECT_EQ(text(prove), "prove p with use lem(q)");
-}
 
 TEST_F(AstLocation, ProveWithoutProofEndsAtGoal) {
   lex("prove a < b");

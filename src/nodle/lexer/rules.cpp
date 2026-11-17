@@ -133,6 +133,7 @@ std::vector<LexerRule> nodle::lexer::rules::create_all_rules() {
 
       create_string_rule("def", K_DEF),
       create_string_rule("override", K_OVERRIDE),
+      create_string_rule("method", K_METHOD),
 
       create_string_rule("!", O_NOT),
       create_string_rule("+", O_PLUS),

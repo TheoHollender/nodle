@@ -51,6 +51,7 @@ enum TokenType {
   // function definition
   K_DEF,
   K_OVERRIDE,
+  K_METHOD,
 
   // ==== OPERANDS ====
   O_NOT,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -145,30 +146,11 @@ struct FieldAccess : public Expression {
 };
 
 struct Call : public Expression {
-  Call(io::SourceLocation func_tok, std::string func, vec_ptr<Expression> args,
+  Call(std::unique_ptr<Expression> object, vec_ptr<Expression> args,
        io::SourceLocation rparen)
-      : Expression(func_tok | rparen), func(std::move(func)),
-        args(std::move(args)) {}
-  std::string func;
-  vec_ptr<Expression> args;
-};
-
-struct MethodCall : public Expression {
-  MethodCall(std::unique_ptr<Expression> object, std::string func,
-             vec_ptr<Expression> args, io::SourceLocation rparen)
       : Expression(object->source_location | rparen), object(std::move(object)),
-        func(std::move(func)), args(std::move(args)) {}
-  std::unique_ptr<Expression> object;
-  std::string func;
-  vec_ptr<Expression> args;
-};
-
-struct Instantiate : public Expression {
-  Instantiate(io::SourceLocation type_tok, std::string type_name,
-              vec_ptr<Expression> args, io::SourceLocation rparen)
-      : Expression(type_tok | rparen), type_name(std::move(type_name)),
         args(std::move(args)) {}
-  std::string type_name;
+  std::unique_ptr<Expression> object;
   vec_ptr<Expression> args;
 };
 
@@ -202,7 +184,7 @@ struct Use : public Node {
   vec_ptr<Expression> args;
 };
 
-using Proof = std::vector<Use>;
+using Proof = vec_ptr<Use>;
 
 // Function
 struct Param : public Node {
@@ -225,7 +207,7 @@ struct Function : public Node {
 
   bool is_override = false;
   vec_ptr<Proposition> conditions;
-  Proof equivalence;
+  std::optional<Proof> equivalence;
 };
 
 // Member and Statement
@@ -242,7 +224,7 @@ struct Prove : public Member {
   Prove(io::SourceLocation prove_tok, std::unique_ptr<Proposition> goal,
         Proof proof)
       : Member(prove_tok | (proof.empty() ? goal->source_location
-                                          : proof.back().source_location)),
+                                          : proof.back()->source_location)),
         goal(std::move(goal)), proof(std::move(proof)) {}
   std::unique_ptr<Proposition> goal;
   Proof proof;

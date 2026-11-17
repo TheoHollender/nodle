@@ -1,0 +1,48 @@
+// ---- Properties ----------------------------------------------------------
+
+property LessOrEqual(x: int, y: int):
+    such that (x <= y)
+
+// ---- Lemmas --------------------------------------------------------------
+
+lemma LessOrEqualIsTransitive(x: int, y: int, z: int):
+    such that (x <= y)
+    such that (y <= z)
+
+    prove (x <= z) with proof ()
+
+lemma LessOrEqualIsTransitiveFour(x: int, y: int, z: int, w: int):
+    such that (x <= y)
+    such that (y <= z)
+    such that (z <= w)
+
+    prove (x <= w) with proof
+        use LessOrEqualIsTransitive(x, y, z);
+        use LessOrEqualIsTransitive(x, z, w)
+
+lemma ZeroIsNeutral(y: int),
+    prove (0 + y == y) with proof ()
+
+// ---- Functions -----------------------------------------------------------
+
+def sum(x: int, y: int) int =
+    x + y
+
+// ---- Function overriding -------------------------------------------------
+
+override def sum(x: int, y: int) int =
+    such that (x == 0)
+    y
+prove equivalence
+    use ZeroIsNeutral(y)
+
+// ---- Classes -------------------------------------------------------------
+
+class SortedTuple(x: int, y: int, z: int):
+    val sum, int = x + y + z
+
+    such that (x <= y)
+    such that (y <= z)
+
+    prove (x <= z) with proof
+        use LessOrEqualIsTransitive(x, y, z)

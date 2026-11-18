@@ -1,6 +1,8 @@
 
 #pragma once
 #include "nodle/io/file.hpp"
+#include <memory>
+#include <optional>
 
 namespace nodle::io {
 
@@ -63,9 +65,18 @@ public:
   std::string as_debug_string(bool note_location = false,
                               uint32_t context = 3) const;
 
+  /**
+   * Returns the padding of the debug string.
+   *
+   * @warning as_debug_string should be called before debug_string_padding
+   */
+  int debug_string_padding() const;
+
 private:
   SourceFile::Ptr file_;
   std::uint32_t offset_, length_;
+
+  std::shared_ptr<std::optional<int>> ref_debug_string_padding_;
 };
 
 }; // namespace nodle::io

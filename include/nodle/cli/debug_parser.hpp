@@ -39,10 +39,15 @@ public:
     }
 
     if (verbose_source_location) {
-      throw std::runtime_error("TODO");
+      std::cout << "AST of " << file->path().string() << ": \n";
+      nodle::ast::BaseAstPrinter baseAstPrinter(std::cout, true, 1);
+      nodle::ast::SourceAstPrinter sourceAstPrinter(baseAstPrinter);
+      sourceAstPrinter.print(&program);
     } else {
       std::cout << "AST of " << file->path().string() << ": \n";
-      std::cout << program << "\n";
+
+      nodle::ast::BaseAstPrinter baseAstPrinter(std::cout);
+      program.accept(baseAstPrinter);
     }
 
     return false;

@@ -61,7 +61,7 @@ ParserContextPtr sample_context() {
 }; // namespace
 
 TEST(CallRule, RuleFunctionIsCalled) {
-  nodle::parser::rules::CallRule<int, rule_function> rule;
+  nodle::parser::rules::CallRule<int, rule_function> rule("");
 
   auto res = rule.parse(sample_context());
   EXPECT_FALSE(res.has_value());

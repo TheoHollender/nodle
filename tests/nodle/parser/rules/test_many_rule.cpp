@@ -22,6 +22,9 @@
 #include "nodle/parser/rules/or.hpp"
 #include "nodle/parser/rules/token.hpp"
 
+#include "nodle/parser/graph/graph.hpp"
+using namespace nodle::parser;
+
 using nodle::io::SourceFile;
 using nodle::io::SourceLocation;
 using nodle::lexer::Token;
@@ -75,12 +78,18 @@ template <typename T> struct ZeroRule : BasicRuleTrait<ZeroRule<T>, T> {
   ParseResult<T> parse(ParserContextPtr) const {
     return ParseResult<T>::Match(value, false);
   }
+  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {(void) graph; (void) rule;
+    return {0, 0};
+  }
 };
 
 // Never matches.
 template <typename T> struct FailRule : BasicRuleTrait<FailRule<T>, T> {
   ParseResult<T> parse(ParserContextPtr) const {
     return ParseResult<T>::NoMatch();
+  }
+  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {(void) graph; (void) rule;
+    return {0, 0};
   }
 };
 
@@ -94,6 +103,9 @@ template <typename T> struct EatRule : BasicRuleTrait<EatRule<T>, T> {
     }
     ctx->pop();
     return ParseResult<T>::Match(value, true);
+  }
+  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {(void) graph; (void) rule;
+    return {0, 0};
   }
 };
 
@@ -109,6 +121,9 @@ struct UniqueRule : BasicRuleTrait<UniqueRule, std::unique_ptr<int>> {
     return ParseResult<std::unique_ptr<int>>::Match(
         std::make_unique<int>(value), true);
   }
+  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {(void) graph; (void) rule;
+    return {0, 0};
+  }
 };
 
 // Records that it was run, then delegates.
@@ -122,6 +137,9 @@ struct LoggedRule : BasicRuleTrait<LoggedRule<R>, typename R::return_type> {
   ParseResult<typename R::return_type> parse(ParserContextPtr ctx) const {
     log->push_back(name);
     return inner.parse(ctx);
+  }
+  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {(void) graph; (void) rule;
+    return {0, 0};
   }
 };
 
@@ -140,6 +158,9 @@ struct ThenZeroRule : BasicRuleTrait<ThenZeroRule, int> {
       return ParseResult<int>::Match(index, true);
     }
     return ParseResult<int>::Match(-1, false);
+  }
+  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {(void) graph; (void) rule;
+    return {0, 0};
   }
 };
 
@@ -761,7 +782,7 @@ TEST(ManyRule, AnOptionalManyRuleIsAnOptionalVector) {
 // ----------------------------------------------------------- with CallRule
 
 TEST(ManyRule, ManyCalls) {
-  ManyRule rule{CallRule<Token, &fn_token<K_VAL>>{}};
+  ManyRule rule{CallRule<Token, &fn_token<K_VAL>>{""}};
   auto ctx = context_of({K_VAL, K_VAL, I_IDENTIFIER});
   auto result = rule.parse(ctx);
   ASSERT_TRUE(result.has_value());

@@ -1,6 +1,7 @@
 
 #include "nodle/ast/printer.hpp"
 #include "nodle/cli/runner.hpp"
+#include "nodle/parser/graph/print.hpp"
 
 namespace nodle::cli {
 
@@ -8,6 +9,7 @@ struct DebugParserCLI : public RunnerCLI {
 private:
   bool debug_parser_enabled = false;
   bool verbose_source_location = false;
+  bool show_parser_graph = false;
 
 public:
   void pre_argument_parser(argparse::ArgumentParser &parser) override {
@@ -16,6 +18,9 @@ public:
         .flag();
     parser.add_argument("-Vp", "--verbose-parser-source")
         .help("Print the source locations of AST nodes.")
+        .flag();
+    parser.add_argument("-Spg", "--show-parser-graph")
+        .help("Generate parser graph and output it on standard output.")
         .flag();
   };
   void post_argument_parser(argparse::ArgumentParser &parser) override {
@@ -27,6 +32,16 @@ public:
         std::cerr << "warning: option --verbose-parser-source/-Vp is useless "
                      "without option --debug-parser/-Dp\n";
       }
+    }
+    if (parser.get<bool>("-Spg")) {
+      show_parser_graph = true;
+
+      std::cerr << "Generating parser graph...\n";
+      nodle::parser::Parser parser;
+      nodle::parser::graph::ParserGraph graph = parser.generate_graph();
+      std::cout << graph;
+    
+      exit(0);
     }
   };
 

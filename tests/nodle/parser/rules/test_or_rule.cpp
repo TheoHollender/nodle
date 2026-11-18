@@ -9,6 +9,9 @@
 
 #include "nodle/parser/rules/or.hpp"
 
+#include "nodle/parser/graph/graph.hpp"
+using namespace nodle::parser;
+
 using nodle::parser::rules::or_util::unpack_or;
 using nodle::parser::rules::or_util::unpack_or_t;
 using nodle::parser::rules::or_util::detail::is_std_variant_v;
@@ -340,12 +343,18 @@ template <typename T> struct ZeroRule : BasicRuleTrait<ZeroRule<T>, T> {
   ParseResult<T> parse(ParserContextPtr) const {
     return ParseResult<T>::Match(value, false);
   }
+  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {(void) graph; (void) rule;
+    return {0, 0};
+  }
 };
 
 // Never matches.
 template <typename T> struct FailRule : BasicRuleTrait<FailRule<T>, T> {
   ParseResult<T> parse(ParserContextPtr) const {
     return ParseResult<T>::NoMatch();
+  }
+  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {(void) graph; (void) rule;
+    return {0, 0};
   }
 };
 
@@ -359,6 +368,9 @@ template <typename T> struct EatRule : BasicRuleTrait<EatRule<T>, T> {
     }
     ctx->pop();
     return ParseResult<T>::Match(value, true);
+  }
+  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {(void) graph; (void) rule;
+    return {0, 0};
   }
 };
 
@@ -374,6 +386,9 @@ struct UniqueRule : BasicRuleTrait<UniqueRule, std::unique_ptr<int>> {
     return ParseResult<std::unique_ptr<int>>::Match(
         std::make_unique<int>(value), true);
   }
+  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {(void) graph; (void) rule;
+    return {0, 0};
+  }
 };
 
 // Records that it was run, then delegates.
@@ -387,6 +402,9 @@ struct LoggedRule : BasicRuleTrait<LoggedRule<R>, typename R::return_type> {
   ParseResult<typename R::return_type> parse(ParserContextPtr ctx) const {
     log->push_back(name);
     return inner.parse(ctx);
+  }
+  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {(void) graph; (void) rule;
+    return {0, 0};
   }
 };
 

@@ -2,6 +2,7 @@
 #pragma once
 
 #include "nodle/parser/context.hpp"
+#include "nodle/parser/graph/graph.hpp"
 #include <functional>
 #include <memory>
 #include <optional>
@@ -48,10 +49,13 @@ public:
 };
 
 template <typename T>
-concept BasicRule = requires(const T t, ParserContextPtr ctx) {
+concept BasicRule = requires(const T t, ParserContextPtr ctx,
+                             graph::ParserGraph &graph, std::string &rule) {
   typename T::return_type;
 
   { t.parse(ctx) } -> std::same_as<ParseResult<typename T::return_type>>;
+  /* graph::Subgraph generate_graph (graph::ParserGraph &graph) const */
+  { t.generate_graph(graph, rule) } -> std::same_as<graph::Subgraph>;
 };
 
 template <typename Derived, typename Ret> struct BasicRuleTrait;
@@ -83,6 +87,24 @@ public:
     bool consumed = !result.empty();
     return ParseResult<return_type>::Match(std::move(result), consumed);
   }
+  graph::Subgraph generate_graph(graph::ParserGraph &graph,
+                                 std::string &rule) const {
+    int start_loop = graph.allocate_node(rule);
+
+    graph::Subgraph internal = sub_rule_.generate_graph(graph, rule);
+
+    int end_loop = graph.allocate_node(rule);
+
+    // enter loop
+    graph.add_edge(graph::Edge::epsilon(start_loop, internal.start_node));
+    graph.add_edge(graph::Edge::epsilon(internal.end_node, end_loop));
+    // redo loop
+    graph.add_edge(graph::Edge::back_edge(end_loop, internal.start_node));
+    // skip loop
+    graph.add_edge(graph::Edge::epsilon(start_loop, end_loop));
+
+    return graph::Subgraph(start_loop, end_loop);
+  }
 };
 
 template <BasicRule SR, typename U>
@@ -109,6 +131,10 @@ public:
     }
 
     return ParseResult<return_type>::NoMatch();
+  }
+  graph::Subgraph generate_graph(graph::ParserGraph &graph,
+                                 std::string &rule) const {
+    return sub_rule_.generate_graph(graph, rule);
   }
 };
 

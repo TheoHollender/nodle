@@ -24,6 +24,15 @@ public:
     }
     return ParseResult<lexer::Token>::NoMatch();
   }
+  graph::Subgraph generate_graph(graph::ParserGraph &graph,
+                                 std::string &rule) const {
+    int start = graph.allocate_node(rule);
+    int end = graph.allocate_node(rule);
+
+    graph.add_edge(graph::Edge::token(start, end, token_type_));
+
+    return graph::Subgraph(start, end);
+  }
 };
 
 } // namespace nodle::parser::rules

@@ -72,14 +72,14 @@ ParserContextPtr sample_context() {
 }; // namespace
 
 TEST(MapRule, EmptyStaysEmpty) {
-  auto rule = CallRule<int, empty_rule_function>{}.map<int>(
+  auto rule = CallRule<int, empty_rule_function>{""}.map<int>(
       [](int x) { return x + 1; });
 
   auto res = rule.parse(sample_context());
   EXPECT_FALSE(res.has_value());
 }
 TEST(MapRule, ZeroNoTokenStaysWithMapped) {
-  auto rule = CallRule<int, zero_no_token_rule_function>{}.map<int>(
+  auto rule = CallRule<int, zero_no_token_rule_function>{""}.map<int>(
       [](int x) { return x + 1; });
 
   auto res = rule.parse(sample_context());
@@ -88,7 +88,7 @@ TEST(MapRule, ZeroNoTokenStaysWithMapped) {
   EXPECT_EQ((*res), 1);
 }
 TEST(MapRule, ZeroWithTokenStaysWithMapped) {
-  auto rule = CallRule<int, zero_one_token_rule_function>{}.map<int>(
+  auto rule = CallRule<int, zero_one_token_rule_function>{""}.map<int>(
       [](int x) { return x + 1; });
 
   auto res = rule.parse(sample_context());

@@ -90,6 +90,17 @@ public:
             std::forward<typename SR2::return_type>(*res2)),
         res1.is_match_consumed() || res2.is_match_consumed());
   }
+
+  graph::Subgraph generate_graph(graph::ParserGraph &graph,
+                                 std::string &rule) const {
+    graph::Subgraph internal1 = sub_rule1_.generate_graph(graph, rule);
+    graph::Subgraph internal2 = sub_rule2_.generate_graph(graph, rule);
+
+    graph.add_edge(
+        graph::Edge::epsilon(internal1.end_node, internal2.start_node));
+
+    return graph::Subgraph(internal1.start_node, internal2.end_node);
+  }
 };
 
 template <BasicRule SR1, BasicRule SR2>

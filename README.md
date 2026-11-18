@@ -36,6 +36,7 @@ Run the compiler on one or more `.nodle` files:
 ./build/nodle -Dl --verbose-lexer-source examples/hw/HelloWorld.nodle  # also print source locations
 ./build/nodle --debug-parser examples/hw/HelloWorld.nodle        # print the AST
 ./build/nodle -Dp --verbose-parser-source examples/hw/HelloWorld.nodle # print the AST with the source locations
+./build/nodle -Spg examples/hw/HelloWorld.nodle > parser.dot && dot -Tsvg parser.dot -o parserver.svg # generate a graph representation of the parser
 ./build/nodle --help
 ```
 

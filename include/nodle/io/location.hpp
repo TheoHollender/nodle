@@ -64,13 +64,13 @@ public:
    */
   std::string as_debug_string(bool note_location = false,
                               uint32_t context = 3) const;
-  
+
   /**
    * Returns the padding of the debug string.
-   * 
+   *
    * @warning as_debug_string should be called before debug_string_padding
    */
-  int debug_string_padding () const;
+  int debug_string_padding() const;
 
 private:
   SourceFile::Ptr file_;

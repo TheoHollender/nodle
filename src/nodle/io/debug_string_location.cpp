@@ -144,10 +144,11 @@ std::string SourceLocation::as_debug_string(bool note_location,
   return buffer.str();
 }
 
-int SourceLocation::debug_string_padding () const {
+int SourceLocation::debug_string_padding() const {
   const auto &opt = ref_debug_string_padding_.get();
   if (!opt->has_value()) {
-    throw std::runtime_error("debug_string_padding() should be called after as_debug_string()");
+    throw std::runtime_error(
+        "debug_string_padding() should be called after as_debug_string()");
   }
 
   return opt->value();

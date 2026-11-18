@@ -43,19 +43,17 @@ std::string_view symbol(BinOp op) {
 
 } // namespace
 
-void BaseAstPrinter::set_base_indent (int base_indent) {
+void BaseAstPrinter::set_base_indent(int base_indent) {
   base_indent_ = base_indent;
 }
 
-std::ostream& BaseAstPrinter::get_stream () {
-  return out_;
-}
-AstIndex& BaseAstPrinter::get_index () {
-  return index_;
-}
+std::ostream &BaseAstPrinter::get_stream() { return out_; }
+AstIndex &BaseAstPrinter::get_index() { return index_; }
 
-BaseAstPrinter::BaseAstPrinter(std::ostream &out, bool new_lines, int maximal_depth)
-    : out_(out), new_lines_(new_lines), maximal_depth_(maximal_depth), current_depth_(maximal_depth) {}
+BaseAstPrinter::BaseAstPrinter(std::ostream &out, bool new_lines,
+                               int maximal_depth)
+    : out_(out), new_lines_(new_lines), maximal_depth_(maximal_depth),
+      current_depth_(maximal_depth) {}
 
 void BaseAstPrinter::newline() {
   if (new_lines_) {
@@ -71,44 +69,45 @@ void BaseAstPrinter::print_child(const Node *node) {
     out_ << "<null>";
     return;
   }
-  current_depth_ --;
+  current_depth_--;
   if (current_depth_ == 0) {
-    current_depth_ ++;
+    current_depth_++;
     index_.prepareCache(node);
     out_ << "<node #" << index_.indexOf(node) << ">";
 
-    return ;
+    return;
   }
   node->accept(*this);
-  current_depth_ ++;
+  current_depth_++;
 }
 
-template<typename F>
-void BaseAstPrinter::print_block (std::string name, F func) {
+template <typename F>
+void BaseAstPrinter::print_block(std::string name, F func) {
   out_ << name << "{";
-  added_indent_ ++;
+  added_indent_++;
 
   func();
 
-  added_indent_ --;
+  added_indent_--;
   newline();
   out_ << "}";
 }
-template<typename T, typename F>
-void BaseAstPrinter::print_list (std::string name, const std::vector<T> &values, F func) {
+template <typename T, typename F>
+void BaseAstPrinter::print_list(std::string name, const std::vector<T> &values,
+                                F func) {
   int offset = 0;
   for (const auto &val : values) {
     newline();
     out_ << name << "#" << offset << " = ";
     func(val);
-    offset ++;
+    offset++;
   }
 }
-void BaseAstPrinter::print_field (std::string field, std::string value) {
+void BaseAstPrinter::print_field(std::string field, std::string value) {
   newline();
   out_ << field << " = \"" << value << "\"";
 }
-void BaseAstPrinter::print_field (std::string field, const Node* value) {
+void BaseAstPrinter::print_field(std::string field, const Node *value) {
   newline();
   out_ << field << " = ";
   print_child(value);
@@ -121,26 +120,31 @@ void BaseAstPrinter::visit(const TFloat &) { out_ << "float"; }
 void BaseAstPrinter::visit(const TBoolean &) { out_ << "bool"; }
 void BaseAstPrinter::visit(const TTuple &node) {
   print_block("Tuple", [&node, this]() {
-    print_list("subtype", node.values, [this](auto &x) {
-      print_child(x.get());
-    });
+    print_list("subtype", node.values,
+               [this](auto &x) { print_child(x.get()); });
   });
 }
-void BaseAstPrinter::visit(const TNamed &node) { out_ << "Class{name = " << node.name << "}"; }
+void BaseAstPrinter::visit(const TNamed &node) {
+  out_ << "Class{name = " << node.name << "}";
+}
 
 // ==== Expressions ====
 
-void BaseAstPrinter::visit(const EInteger &node) { out_ << "int{" << node.value << "}"; }
-void BaseAstPrinter::visit(const EFloat &node) { out_ << "float{" << node.value << "}"; }
+void BaseAstPrinter::visit(const EInteger &node) {
+  out_ << "int{" << node.value << "}";
+}
+void BaseAstPrinter::visit(const EFloat &node) {
+  out_ << "float{" << node.value << "}";
+}
 void BaseAstPrinter::visit(const EBool &node) {
   out_ << (node.value ? "bool{true}" : "bool{false}");
 }
-void BaseAstPrinter::visit(const Var &node) { out_ << "var{" << node.name << "}"; }
+void BaseAstPrinter::visit(const Var &node) {
+  out_ << "var{" << node.name << "}";
+}
 void BaseAstPrinter::visit(const ETuple &node) {
   print_block("Tuple", [&node, this]() {
-    print_list("el", node.values, [this](auto &x) {
-      print_child(x.get());
-    });
+    print_list("el", node.values, [this](auto &x) { print_child(x.get()); });
   });
 }
 void BaseAstPrinter::visit(const Self &) { out_ << "Self"; }
@@ -154,9 +158,7 @@ void BaseAstPrinter::visit(const EBinOp &node) {
 }
 
 void BaseAstPrinter::visit(const Not &node) {
-  print_block("Not", [&node, this]() {
-    print_field("expr", node.exp.get());
-  });
+  print_block("Not", [&node, this]() { print_field("expr", node.exp.get()); });
 }
 
 void BaseAstPrinter::visit(const If &node) {
@@ -177,9 +179,7 @@ void BaseAstPrinter::visit(const FieldAccess &node) {
 void BaseAstPrinter::visit(const Call &node) {
   print_block("Call", [&node, this]() {
     print_field("object", node.object.get());
-    print_list("arg", node.args, [this](auto &x) {
-      print_child(x.get());
-    });
+    print_list("arg", node.args, [this](auto &x) { print_child(x.get()); });
   });
 }
 
@@ -191,18 +191,14 @@ void BaseAstPrinter::visit(const PFollows &node) {
   print_block("Follows", [&node, this]() {
     print_field("lhs", node.e0.get());
     print_field("property", node.property);
-    print_list("arg", node.args, [this](auto &x) {
-      print_child(x.get());
-    });
+    print_list("arg", node.args, [this](auto &x) { print_child(x.get()); });
   });
 }
 
 void BaseAstPrinter::visit(const Use &node) {
   print_block("Use", [&node, this]() {
     print_field("lemma", node.name);
-    print_list("arg", node.args, [this](auto &x) {
-      print_child(x.get());
-    });
+    print_list("arg", node.args, [this](auto &x) { print_child(x.get()); });
   });
 }
 
@@ -216,23 +212,20 @@ void BaseAstPrinter::visit(const Param &node) {
 }
 
 void BaseAstPrinter::visit(const Function &node) {
-  print_block((node.is_override ? "Function[override]" : "Function"), [&node, this]() {
+  print_block((node.is_override ? "Function[override]" : "Function"), [&node,
+                                                                       this]() {
     print_field("name", node.name);
-    print_list("param", node.params, [this](auto &x) {
-      print_child(x.get());
-    });
+    print_list("param", node.params, [this](auto &x) { print_child(x.get()); });
     print_field("return", node.return_type.get());
     if (node.is_override && !node.conditions.empty()) {
-      print_list("cond", node.conditions, [this](auto &x) {
-        print_child(x.get());
-      });
+      print_list("cond", node.conditions,
+                 [this](auto &x) { print_child(x.get()); });
     }
     print_field("body", node.body.get());
     if (node.equivalence) {
       print_block("Equivalence", [&node, this]() {
-        print_list("use", node.equivalence.value(), [this](auto &x) {
-          print_child(x.get());
-        });
+        print_list("use", node.equivalence.value(),
+                   [this](auto &x) { print_child(x.get()); });
       });
     }
   });
@@ -241,9 +234,8 @@ void BaseAstPrinter::visit(const Function &node) {
 // ==== Members ====
 
 void BaseAstPrinter::visit(const SuchThat &node) {
-  print_block("SuchThat", [&node, this]() {
-    print_field("prop", node.prop.get());
-  });
+  print_block("SuchThat",
+              [&node, this]() { print_field("prop", node.prop.get()); });
 }
 
 void BaseAstPrinter::visit(const Prove &node) {
@@ -251,9 +243,7 @@ void BaseAstPrinter::visit(const Prove &node) {
     print_field("goal", node.goal.get());
     newline();
     print_block("Proof", [&node, this]() {
-      print_list("use", node.proof, [this](auto &x) {
-        print_child(x.get());
-      });
+      print_list("use", node.proof, [this](auto &x) { print_child(x.get()); });
     });
   });
 }
@@ -301,57 +291,40 @@ void BaseAstPrinter::visit(const Edge &node) {
 void BaseAstPrinter::visit(const PropertyDecl &node) {
   print_block("Property", [&node, this]() {
     print_field("name", node.name);
-    print_list("param", node.params, [this](auto &x) {
-      print_child(x.get());
-    });
-    print_list("req", node.requirements, [this](auto &x) {
-      print_child(x.get());
-    });
+    print_list("param", node.params, [this](auto &x) { print_child(x.get()); });
+    print_list("req", node.requirements,
+               [this](auto &x) { print_child(x.get()); });
   });
 }
 
 void BaseAstPrinter::visit(const LemmaDecl &node) {
   print_block("Lemma", [&node, this]() {
     print_field("name", node.name);
-    print_list("param", node.params, [this](auto &x) {
-      print_child(x.get());
-    });
-    print_list("sttm", node.statements, [this](auto &x) {
-      print_child(x.get());
-    });
+    print_list("param", node.params, [this](auto &x) { print_child(x.get()); });
+    print_list("sttm", node.statements,
+               [this](auto &x) { print_child(x.get()); });
   });
 }
 
 void BaseAstPrinter::visit(const ClassDecl &node) {
   print_block("Class", [&node, this]() {
     print_field("name", node.name);
-    print_list("param", node.params, [this](auto &x) {
-      print_child(x.get());
-    });
-    print_list("members", node.members, [this](auto &x) {
-      print_child(x.get());
-    });
+    print_list("param", node.params, [this](auto &x) { print_child(x.get()); });
+    print_list("members", node.members,
+               [this](auto &x) { print_child(x.get()); });
   });
 }
 
 void BaseAstPrinter::visit(const GraphDecl &node) {
   print_block("Graph", [&node, this]() {
     print_field("name", node.name);
-    print_list("param", node.params, [this](auto &x) {
-      print_child(x.get());
-    });
-    print_list("state", node.state, [this](auto &x) {
-      print_child(x.get());
-    });
-    print_list("weight", node.weight, [this](auto &x) {
-      print_child(x.get());
-    });
-    print_list("edges", node.edges, [this](auto &x) {
-      print_child(x.get());
-    });
-    print_list("members", node.members, [this](auto &x) {
-      print_child(x.get());
-    });
+    print_list("param", node.params, [this](auto &x) { print_child(x.get()); });
+    print_list("state", node.state, [this](auto &x) { print_child(x.get()); });
+    print_list("weight", node.weight,
+               [this](auto &x) { print_child(x.get()); });
+    print_list("edges", node.edges, [this](auto &x) { print_child(x.get()); });
+    print_list("members", node.members,
+               [this](auto &x) { print_child(x.get()); });
   });
 }
 
@@ -360,7 +333,7 @@ void BaseAstPrinter::visit(const FunctionDecl &node) { visit(node.fn); }
 void BaseAstPrinter::visit(const Program &node) {
   print_block("Program", [&node, this]() {
     bool first = true;
-    
+
     for (auto &decl : node.decls) {
       newline();
       print_child(decl.get());

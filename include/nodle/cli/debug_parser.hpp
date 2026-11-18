@@ -41,7 +41,7 @@ public:
     if (verbose_source_location) {
       std::cout << "AST of " << file->path().string() << ": \n";
       nodle::ast::BaseAstPrinter baseAstPrinter(std::cout, true, 1);
-      nodle::ast::SourceAstPrinter sourceAstPrinter (baseAstPrinter);
+      nodle::ast::SourceAstPrinter sourceAstPrinter(baseAstPrinter);
       sourceAstPrinter.print(&program);
     } else {
       std::cout << "AST of " << file->path().string() << ": \n";

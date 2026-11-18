@@ -8,27 +8,26 @@ using namespace nodle::ast;
 SourceAstPrinter::SourceAstPrinter(BaseAstPrinter &printer)
     : printer_(printer) {}
 
-void SourceAstPrinter::print (const Node* node) {
+void SourceAstPrinter::print(const Node *node) {
   node->accept(*this);
 
   printer_.get_index().prepareCache(node);
 
-  printer_.get_stream()
-    << node->source_location.as_debug_string(true)
-    << "<node #" << printer_.get_index().indexOf(node) << "> AST"
-    << "\n";
+  printer_.get_stream() << node->source_location.as_debug_string(true)
+                        << "<node #" << printer_.get_index().indexOf(node)
+                        << "> AST" << "\n";
 
   int padding = node->source_location.debug_string_padding() + 2;
   printer_.get_stream() << std::string(padding, ' ');
 
   printer_.set_base_indent(padding);
   node->accept(printer_);
-  
+
   printer_.get_stream() << "\n\n";
 }
 
-template<typename T>
-void SourceAstPrinter::print_vecptr (const vec_ptr<T> &values) {
+template <typename T>
+void SourceAstPrinter::print_vecptr(const vec_ptr<T> &values) {
   for (auto &val : values) {
     print(val.get());
   }
@@ -39,9 +38,7 @@ void SourceAstPrinter::print_vecptr (const vec_ptr<T> &values) {
 void SourceAstPrinter::visit(const TInteger &) {}
 void SourceAstPrinter::visit(const TFloat &) {}
 void SourceAstPrinter::visit(const TBoolean &) {}
-void SourceAstPrinter::visit(const TTuple &node) {
-  print_vecptr(node.values);
-}
+void SourceAstPrinter::visit(const TTuple &node) { print_vecptr(node.values); }
 void SourceAstPrinter::visit(const TNamed &) {}
 
 // ==== Expressions ====
@@ -50,9 +47,7 @@ void SourceAstPrinter::visit(const EInteger &) {}
 void SourceAstPrinter::visit(const EFloat &) {}
 void SourceAstPrinter::visit(const EBool &) {}
 void SourceAstPrinter::visit(const Var &) {}
-void SourceAstPrinter::visit(const ETuple &node) {
-  print_vecptr(node.values);
-}
+void SourceAstPrinter::visit(const ETuple &node) { print_vecptr(node.values); }
 void SourceAstPrinter::visit(const Self &) {}
 
 void SourceAstPrinter::visit(const EBinOp &node) {
@@ -60,9 +55,7 @@ void SourceAstPrinter::visit(const EBinOp &node) {
   print(node.rhs.get());
 }
 
-void SourceAstPrinter::visit(const Not &node) {
-  print(node.exp.get());
-}
+void SourceAstPrinter::visit(const Not &node) { print(node.exp.get()); }
 
 void SourceAstPrinter::visit(const If &node) {
   print(node.cond.get());
@@ -88,15 +81,11 @@ void SourceAstPrinter::visit(const PFollows &node) {
   print_vecptr(node.args);
 }
 
-void SourceAstPrinter::visit(const Use &node) {
-  print_vecptr(node.args);
-}
+void SourceAstPrinter::visit(const Use &node) { print_vecptr(node.args); }
 
 // ==== Functions ====
 
-void SourceAstPrinter::visit(const Param &node) {
-  print(node.type.get());
-}
+void SourceAstPrinter::visit(const Param &node) { print(node.type.get()); }
 
 void SourceAstPrinter::visit(const Function &node) {
   print_vecptr(node.params);
@@ -112,27 +101,21 @@ void SourceAstPrinter::visit(const Function &node) {
 
 // ==== Members ====
 
-void SourceAstPrinter::visit(const SuchThat &node) {
-  print(node.prop.get());
-}
+void SourceAstPrinter::visit(const SuchThat &node) { print(node.prop.get()); }
 
 void SourceAstPrinter::visit(const Prove &node) {
   print(node.goal.get());
   print_vecptr(node.proof);
 }
 
-void SourceAstPrinter::visit(const ValDecl &node) {
-  print(node.type.get());
-}
+void SourceAstPrinter::visit(const ValDecl &node) { print(node.type.get()); }
 
 void SourceAstPrinter::visit(const ValDef &node) {
   print(node.type.get());
   print(node.value.get());
 }
 
-void SourceAstPrinter::visit(const Method &node) {
-  visit(node.fn);
-}
+void SourceAstPrinter::visit(const Method &node) { visit(node.fn); }
 
 // ==== Graph components ====
 
@@ -174,6 +157,4 @@ void SourceAstPrinter::visit(const GraphDecl &node) {
 
 void SourceAstPrinter::visit(const FunctionDecl &node) { visit(node.fn); }
 
-void SourceAstPrinter::visit(const Program &node) {
-  print_vecptr(node.decls);
-}
+void SourceAstPrinter::visit(const Program &node) { print_vecptr(node.decls); }

@@ -88,12 +88,14 @@ public:
 
     return ParseResult<return_type>::Match(return_type(), false);
   }
-  
-  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {
+
+  graph::Subgraph generate_graph(graph::ParserGraph &graph,
+                                 std::string &rule) const {
     graph::Subgraph internal = sub_rule_.generate_graph(graph, rule);
 
     // add skip
-    graph.add_edge(graph::Edge::epsilon(internal.start_node, internal.end_node));
+    graph.add_edge(
+        graph::Edge::epsilon(internal.start_node, internal.end_node));
 
     return internal;
   }

@@ -2,8 +2,8 @@
 #pragma once
 
 #include "nodle/ast/ast.hpp"
-#include "nodle/parser/graph/graph.hpp"
 #include "nodle/parser/context.hpp"
+#include "nodle/parser/graph/graph.hpp"
 #include "nodle/parser/rules/basic.hpp"
 #include "nodle/parser/rules/call.hpp"
 #include "nodle/parser/rules/chain.hpp"
@@ -19,7 +19,7 @@ struct Parser {
   std::unique_ptr<nodle::ast::Program>
   parse(nodle::parser::ParserContextPtr context);
 
-  graph::ParserGraph generate_graph ();
+  graph::ParserGraph generate_graph();
 };
 
 }; // namespace nodle::parser

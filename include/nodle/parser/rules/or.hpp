@@ -135,7 +135,8 @@ public:
 
     return ParseResult<return_type>::NoMatch();
   }
-  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {
+  graph::Subgraph generate_graph(graph::ParserGraph &graph,
+                                 std::string &rule) const {
     int start_or = graph.allocate_node(rule);
 
     graph::Subgraph internal1 = sub_rule1_.generate_graph(graph, rule);
@@ -145,7 +146,7 @@ public:
 
     graph.add_edge(graph::Edge::epsilon(start_or, internal1.start_node));
     graph.add_edge(graph::Edge::epsilon(start_or, internal2.start_node));
-    
+
     graph.add_edge(graph::Edge::epsilon(internal1.end_node, end_or));
     graph.add_edge(graph::Edge::epsilon(internal2.end_node, end_or));
 

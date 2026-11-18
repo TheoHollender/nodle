@@ -40,7 +40,7 @@ public:
       nodle::parser::Parser parser;
       nodle::parser::graph::ParserGraph graph = parser.generate_graph();
       std::cout << graph;
-    
+
       exit(0);
     }
   };

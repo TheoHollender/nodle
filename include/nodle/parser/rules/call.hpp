@@ -10,14 +10,16 @@ template <typename RV, ParseResult<RV> (*Func)(ParserContextPtr)>
 struct CallRule : public BasicRuleTrait<CallRule<RV, Func>, RV> {
 private:
   std::string rule_name_;
+
 public:
   using return_value = RV;
 
-  CallRule (std::string rule_name) : rule_name_(rule_name) {}
+  CallRule(std::string rule_name) : rule_name_(rule_name) {}
 
   ParseResult<RV> parse(ParserContextPtr ctx) const { return Func(ctx); }
 
-  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {
+  graph::Subgraph generate_graph(graph::ParserGraph &graph,
+                                 std::string &rule) const {
     int start = graph.allocate_node(rule);
     int end = graph.allocate_node(rule);
 

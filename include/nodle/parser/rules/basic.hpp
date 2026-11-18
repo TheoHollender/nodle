@@ -49,7 +49,8 @@ public:
 };
 
 template <typename T>
-concept BasicRule = requires(const T t, ParserContextPtr ctx, graph::ParserGraph &graph, std::string &rule) {
+concept BasicRule = requires(const T t, ParserContextPtr ctx,
+                             graph::ParserGraph &graph, std::string &rule) {
   typename T::return_type;
 
   { t.parse(ctx) } -> std::same_as<ParseResult<typename T::return_type>>;
@@ -86,11 +87,12 @@ public:
     bool consumed = !result.empty();
     return ParseResult<return_type>::Match(std::move(result), consumed);
   }
-  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {
+  graph::Subgraph generate_graph(graph::ParserGraph &graph,
+                                 std::string &rule) const {
     int start_loop = graph.allocate_node(rule);
 
     graph::Subgraph internal = sub_rule_.generate_graph(graph, rule);
-    
+
     int end_loop = graph.allocate_node(rule);
 
     // enter loop
@@ -130,7 +132,8 @@ public:
 
     return ParseResult<return_type>::NoMatch();
   }
-  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {
+  graph::Subgraph generate_graph(graph::ParserGraph &graph,
+                                 std::string &rule) const {
     return sub_rule_.generate_graph(graph, rule);
   }
 };

@@ -149,7 +149,8 @@ auto make_term_rule() {
         return std::make_unique<EBool>(tok.source_location(), false);
       });
   auto not_literal =
-      (rules::TokenRule{O_NOT} >> rules::CallRule<ptr<Expression>, term>("term"))
+      (rules::TokenRule{O_NOT} >>
+       rules::CallRule<ptr<Expression>, term>("term"))
           .map<ptr<Expression>>(
               [](std::tuple<Token, ptr<Expression>> not_and_subexpr) {
                 Token tok = std::get<0>(not_and_subexpr);
@@ -158,8 +159,8 @@ auto make_term_rule() {
                                              std::move(expr));
               });
   auto tuple_or_subexpr =
-      rules::CallRule<ArgumentsList, nonempty_arguments>{"nonempty_arguments"}.map<ptr<Expression>>(
-          [](ArgumentsList x) -> ptr<Expression> {
+      rules::CallRule<ArgumentsList, nonempty_arguments>{"nonempty_arguments"}
+          .map<ptr<Expression>>([](ArgumentsList x) -> ptr<Expression> {
             Token lparen = std::get<0>(x);
             Token rparen = std::get<2>(x);
 
@@ -222,7 +223,8 @@ BinOp binop_of_token(Token &tok) {
   throw std::runtime_error("Unknown binary operation.");
 }
 
-template <auto NextFunc> auto make_expr_of_binop(auto TokensOfStage, std::string next_func) {
+template <auto NextFunc>
+auto make_expr_of_binop(auto TokensOfStage, std::string next_func) {
   auto next_rule = rules::CallRule<ptr<Expression>, NextFunc>{next_func};
   auto steps_rule = (TokensOfStage >> next_rule).many();
 
@@ -244,30 +246,36 @@ template <auto NextFunc> auto make_expr_of_binop(auto TokensOfStage, std::string
 
 auto make_expr_times_rule() {
   return make_expr_of_binop<term>(rules::TokenRule{O_TIMES} |
-                                  rules::TokenRule{O_DIVIDE} |
-                                  rules::TokenRule{O_MODULO}, "term");
+                                      rules::TokenRule{O_DIVIDE} |
+                                      rules::TokenRule{O_MODULO},
+                                  "term");
 }
 auto make_expr_addition_rule() {
-  return make_expr_of_binop<expr_times>(rules::TokenRule{O_PLUS} |
-                                        rules::TokenRule{O_MINUS}, "expr_times");
+  return make_expr_of_binop<expr_times>(
+      rules::TokenRule{O_PLUS} | rules::TokenRule{O_MINUS}, "expr_times");
 }
 auto make_expr_comparison_rule() {
   return make_expr_of_binop<expr_addition>(
       rules::TokenRule{O_EQUAL} | rules::TokenRule{O_DIFFERENT} |
-      rules::TokenRule{O_LESS_THAN} | rules::TokenRule{O_LESS_EQUAL} |
-      rules::TokenRule{O_GREATER_THAN} | rules::TokenRule{O_GREATER_EQUAL}, "expr_addition");
+          rules::TokenRule{O_LESS_THAN} | rules::TokenRule{O_LESS_EQUAL} |
+          rules::TokenRule{O_GREATER_THAN} | rules::TokenRule{O_GREATER_EQUAL},
+      "expr_addition");
 }
 auto make_expr_bool_rule() {
   return make_expr_of_binop<expr_comparison>(rules::TokenRule{O_OR} |
-                                             rules::TokenRule{O_AND} |
-                                             rules::TokenRule{O_XOR}, "expr_comparison");
+                                                 rules::TokenRule{O_AND} |
+                                                 rules::TokenRule{O_XOR},
+                                             "expr_comparison");
 }
 
 auto make_expr_rule() {
   auto iff_expr =
-      (rules::TokenRule{K_IF} >> rules::CallRule<ptr<Expression>, expr>("expr") >>
-       rules::TokenRule{K_THEN} >> rules::CallRule<ptr<Expression>, expr>("expr") >>
-       rules::TokenRule{K_ELSE} >> rules::CallRule<ptr<Expression>, expr>("expr"))
+      (rules::TokenRule{K_IF} >>
+       rules::CallRule<ptr<Expression>, expr>("expr") >>
+       rules::TokenRule{K_THEN} >>
+       rules::CallRule<ptr<Expression>, expr>("expr") >>
+       rules::TokenRule{K_ELSE} >>
+       rules::CallRule<ptr<Expression>, expr>("expr"))
           .map<ptr<Expression>>([](auto iff_data) {
             return std::make_unique<If>(std::get<0>(iff_data).source_location(),
                                         std::move(std::get<1>(iff_data)),
@@ -428,7 +436,8 @@ auto make_function_rule() {
                    .many();
   auto definition =
       (rules::TokenRule{K_DEF} >> rules::TokenRule{I_IDENTIFIER} >>
-       rules::TokenRule{D_LPAREN} >> rules::CallRule<Params, params>{"params"} >>
+       rules::TokenRule{D_LPAREN} >>
+       rules::CallRule<Params, params>{"params"} >>
        rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COLON} >>
        rules::CallRule<ptr<Type>, type>{"type"} >> rules::TokenRule{D_ASSIGN} >>
        props >> rules::CallRule<ptr<Expression>, expr>{"expr"})
@@ -500,7 +509,8 @@ auto make_val_decl_rule() {
 }
 auto make_val_def_rule() {
   return (rules::TokenRule{K_VAL} >> rules::TokenRule{I_IDENTIFIER} >>
-          rules::TokenRule{D_COLON} >> rules::CallRule<ptr<Type>, type>{"type"} >>
+          rules::TokenRule{D_COLON} >>
+          rules::CallRule<ptr<Type>, type>{"type"} >>
           rules::TokenRule{D_ASSIGN} >>
           rules::CallRule<ptr<Expression>, expr>{"expr"})
       .map<ptr<Member>>([](auto x) {
@@ -536,7 +546,8 @@ auto make_property_rule() {
       make_many1_rule<Member>(make_such_that_rule() | make_val_decl_rule());
 
   return (rules::TokenRule{K_PROPERTY} >> rules::TokenRule{I_IDENTIFIER} >>
-          rules::TokenRule{D_LPAREN} >> rules::CallRule<Params, params>{"params"} >>
+          rules::TokenRule{D_LPAREN} >>
+          rules::CallRule<Params, params>{"params"} >>
           rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COLON} >>
           requirements)
       .map<ptr<Declaration>>([](auto x) {
@@ -555,7 +566,8 @@ auto make_lemma_rule() {
       make_many1_rule<Member>(make_such_that_rule() | make_prove_with_rule());
 
   return (rules::TokenRule{K_LEMMA} >> rules::TokenRule{I_IDENTIFIER} >>
-          rules::TokenRule{D_LPAREN} >> rules::CallRule<Params, params>{"params"} >>
+          rules::TokenRule{D_LPAREN} >>
+          rules::CallRule<Params, params>{"params"} >>
           rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COLON} >> statements)
       .map<ptr<Declaration>>([](auto x) {
         auto &[klemma, ident, lparen, params, rparen, comma, sttms] = x;
@@ -572,7 +584,8 @@ auto make_class_rule() {
   auto members = make_many1_rule<Member>(make_class_member_rule());
 
   return (rules::TokenRule{K_CLASS} >> rules::TokenRule{I_IDENTIFIER} >>
-          rules::TokenRule{D_LPAREN} >> rules::CallRule<Params, params>{"params"} >>
+          rules::TokenRule{D_LPAREN} >>
+          rules::CallRule<Params, params>{"params"} >>
           rules::TokenRule{D_RPAREN} >> rules::TokenRule{D_COLON} >> members)
       .map<ptr<Declaration>>([](auto x) {
         auto &[kclass, ident, lparen, params, rparen, comma, membs] = x;
@@ -675,7 +688,7 @@ nodle::parser::Parser::parse(nodle::parser::ParserContextPtr context) {
   return std::move(*result);
 }
 
-nodle::parser::graph::ParserGraph nodle::parser::Parser::generate_graph () {
+nodle::parser::graph::ParserGraph nodle::parser::Parser::generate_graph() {
   nodle::parser::graph::ParserGraph graph;
 
   std::string object_rule_name = "object";
@@ -684,91 +697,99 @@ nodle::parser::graph::ParserGraph nodle::parser::Parser::generate_graph () {
   graph.add_attribute(object_graph.end_node, "end");
   graph.add_label(object_graph.start_node, "object#start");
   graph.add_label(object_graph.end_node, "object#end");
-  
+
   std::string arguments_rule_name = "arguments";
-  auto arguments_graph = arguments_rule.generate_graph(graph, arguments_rule_name);
+  auto arguments_graph =
+      arguments_rule.generate_graph(graph, arguments_rule_name);
   graph.add_attribute(arguments_graph.start_node, "start");
   graph.add_attribute(arguments_graph.end_node, "end");
   graph.add_label(arguments_graph.start_node, "arguments#start");
   graph.add_label(arguments_graph.end_node, "arguments#end");
-  
+
   std::string nonempty_arguments_rule_name = "nonempty_arguments";
-  auto nonempty_arguments_graph = nonempty_arguments_rule.generate_graph(graph, nonempty_arguments_rule_name);
+  auto nonempty_arguments_graph = nonempty_arguments_rule.generate_graph(
+      graph, nonempty_arguments_rule_name);
   graph.add_attribute(nonempty_arguments_graph.start_node, "start");
   graph.add_attribute(nonempty_arguments_graph.end_node, "end");
-  graph.add_label(nonempty_arguments_graph.start_node, "nonempty_arguments#start");
+  graph.add_label(nonempty_arguments_graph.start_node,
+                  "nonempty_arguments#start");
   graph.add_label(nonempty_arguments_graph.end_node, "nonempty_arguments#end");
-  
+
   std::string term_rule_name = "term";
   auto term_graph = term_rule.generate_graph(graph, term_rule_name);
   graph.add_attribute(term_graph.start_node, "start");
   graph.add_attribute(term_graph.end_node, "end");
   graph.add_label(term_graph.start_node, "term#start");
   graph.add_label(term_graph.end_node, "term#end");
-  
+
   std::string expr_times_rule_name = "expr_times";
-  auto expr_times_graph = expr_times_rule.generate_graph(graph, expr_times_rule_name);
+  auto expr_times_graph =
+      expr_times_rule.generate_graph(graph, expr_times_rule_name);
   graph.add_attribute(expr_times_graph.start_node, "start");
   graph.add_attribute(expr_times_graph.end_node, "end");
   graph.add_label(expr_times_graph.start_node, "expr_times#start");
   graph.add_label(expr_times_graph.end_node, "expr_times#end");
-  
+
   std::string expr_addition_rule_name = "expr_addition";
-  auto expr_addition_graph = expr_addition_rule.generate_graph(graph, expr_addition_rule_name);
+  auto expr_addition_graph =
+      expr_addition_rule.generate_graph(graph, expr_addition_rule_name);
   graph.add_attribute(expr_addition_graph.start_node, "start");
   graph.add_attribute(expr_addition_graph.end_node, "end");
   graph.add_label(expr_addition_graph.start_node, "expr_addition#start");
   graph.add_label(expr_addition_graph.end_node, "expr_addition#end");
-  
+
   std::string expr_comparison_rule_name = "expr_comparison";
-  auto expr_comparison_graph = expr_comparison_rule.generate_graph(graph, expr_comparison_rule_name);
+  auto expr_comparison_graph =
+      expr_comparison_rule.generate_graph(graph, expr_comparison_rule_name);
   graph.add_attribute(expr_comparison_graph.start_node, "start");
   graph.add_attribute(expr_comparison_graph.end_node, "end");
   graph.add_label(expr_comparison_graph.start_node, "expr_comparison#start");
   graph.add_label(expr_comparison_graph.end_node, "expr_comparison#end");
-  
+
   std::string expr_bool_rule_name = "expr_bool";
-  auto expr_bool_graph = expr_bool_rule.generate_graph(graph, expr_bool_rule_name);
+  auto expr_bool_graph =
+      expr_bool_rule.generate_graph(graph, expr_bool_rule_name);
   graph.add_attribute(expr_bool_graph.start_node, "start");
   graph.add_attribute(expr_bool_graph.end_node, "end");
   graph.add_label(expr_bool_graph.start_node, "expr_bool#start");
   graph.add_label(expr_bool_graph.end_node, "expr_bool#end");
-  
+
   std::string expr_rule_name = "expr";
   auto expr_graph = expr_rule.generate_graph(graph, expr_rule_name);
   graph.add_attribute(expr_graph.start_node, "start");
   graph.add_attribute(expr_graph.end_node, "end");
   graph.add_label(expr_graph.start_node, "expr#start");
   graph.add_label(expr_graph.end_node, "expr#end");
-  
+
   std::string type_rule_name = "type";
   auto type_graph = type_rule.generate_graph(graph, type_rule_name);
   graph.add_attribute(type_graph.start_node, "start");
   graph.add_attribute(type_graph.end_node, "end");
   graph.add_label(type_graph.start_node, "type#start");
   graph.add_label(type_graph.end_node, "type#end");
-  
+
   std::string proposition_rule_name = "proposition";
-  auto proposition_graph = proposition_rule.generate_graph(graph, proposition_rule_name);
+  auto proposition_graph =
+      proposition_rule.generate_graph(graph, proposition_rule_name);
   graph.add_attribute(proposition_graph.start_node, "start");
   graph.add_attribute(proposition_graph.end_node, "end");
   graph.add_label(proposition_graph.start_node, "proposition#start");
   graph.add_label(proposition_graph.end_node, "proposition#end");
-  
+
   std::string proof_rule_name = "proof";
   auto proof_graph = proof_rule.generate_graph(graph, proof_rule_name);
   graph.add_attribute(proof_graph.start_node, "start");
   graph.add_attribute(proof_graph.end_node, "end");
   graph.add_label(proof_graph.start_node, "proof#start");
   graph.add_label(proof_graph.end_node, "proof#end");
-  
+
   std::string params_rule_name = "params";
   auto params_graph = params_rule.generate_graph(graph, params_rule_name);
   graph.add_attribute(params_graph.start_node, "start");
   graph.add_attribute(params_graph.end_node, "end");
   graph.add_label(params_graph.start_node, "params#start");
   graph.add_label(params_graph.end_node, "params#end");
-  
+
   std::string program_rule_name = "program";
   auto program_graph = program_rule.generate_graph(graph, program_rule_name);
   graph.add_attribute(program_graph.start_node, "start");

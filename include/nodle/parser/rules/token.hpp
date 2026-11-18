@@ -24,7 +24,8 @@ public:
     }
     return ParseResult<lexer::Token>::NoMatch();
   }
-  graph::Subgraph generate_graph (graph::ParserGraph &graph, std::string &rule) const {
+  graph::Subgraph generate_graph(graph::ParserGraph &graph,
+                                 std::string &rule) const {
     int start = graph.allocate_node(rule);
     int end = graph.allocate_node(rule);
 

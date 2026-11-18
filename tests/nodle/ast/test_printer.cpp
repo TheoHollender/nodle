@@ -200,11 +200,11 @@ TEST_F(AstPrinter, Proofs) {
       std::make_unique<Use>(loc(), "b", vec_ptr<Expression>{}, loc()));
 
   std::ostringstream steps;
-  Printer(steps).print(proof);
+  PrettyPrinter(steps).print(proof);
   EXPECT_EQ(steps.str(), "use a(x); use b()");
 
   std::ostringstream empty;
-  Printer(empty).print(Proof{});
+  PrettyPrinter(empty).print(Proof{});
   EXPECT_EQ(empty.str(), "()");
 }
 

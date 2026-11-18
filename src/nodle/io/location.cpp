@@ -12,6 +12,8 @@ SourceLocation::SourceLocation(SourceFile::Ptr file, std::uint32_t offset,
   file_ = std::move(file);
   offset_ = offset;
   length_ = length;
+
+  ref_debug_string_padding_ = std::make_shared<std::optional<int>>();
 }
 
 SourceFile::Ptr SourceLocation::file() const { return file_; }

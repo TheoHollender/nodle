@@ -43,11 +43,11 @@ std::string_view symbol(BinOp op) {
 
 } // namespace
 
-Printer::Printer(std::ostream &out) : out_(out) {}
+PrettyPrinter::PrettyPrinter(std::ostream &out) : out_(out) {}
 
-void Printer::newline() { out_ << '\n' << std::string(2 * indent_, ' '); }
+void PrettyPrinter::newline() { out_ << '\n' << std::string(2 * indent_, ' '); }
 
-void Printer::print_child(const Node *node) {
+void PrettyPrinter::print_child(const Node *node) {
   if (node == nullptr) {
     out_ << "<null>";
     return;
@@ -55,7 +55,7 @@ void Printer::print_child(const Node *node) {
   node->accept(*this);
 }
 
-template <typename T> void Printer::print_list(const vec_ptr<T> &items) {
+template <typename T> void PrettyPrinter::print_list(const vec_ptr<T> &items) {
   out_ << '(';
   for (std::size_t i = 0; i < items.size(); i++) {
     if (i > 0) {
@@ -66,7 +66,7 @@ template <typename T> void Printer::print_list(const vec_ptr<T> &items) {
   out_ << ')';
 }
 
-void Printer::block_item(bool &first) {
+void PrettyPrinter::block_item(bool &first) {
   if (!first) {
     out_ << ';';
   }
@@ -74,7 +74,7 @@ void Printer::block_item(bool &first) {
   newline();
 }
 
-template <typename T> void Printer::print_block(const vec_ptr<T> &items) {
+template <typename T> void PrettyPrinter::print_block(const vec_ptr<T> &items) {
   indent_++;
   bool first = true;
   for (const auto &item : items) {
@@ -84,7 +84,7 @@ template <typename T> void Printer::print_block(const vec_ptr<T> &items) {
   indent_--;
 }
 
-void Printer::print(const Proof &proof) {
+void PrettyPrinter::print(const Proof &proof) {
   if (proof.empty()) {
     out_ << "()";
     return;
@@ -99,24 +99,24 @@ void Printer::print(const Proof &proof) {
 
 // ==== Types ====
 
-void Printer::visit(const TInteger &) { out_ << "int"; }
-void Printer::visit(const TFloat &) { out_ << "float"; }
-void Printer::visit(const TBoolean &) { out_ << "bool"; }
-void Printer::visit(const TTuple &node) { print_list(node.values); }
-void Printer::visit(const TNamed &node) { out_ << node.name; }
+void PrettyPrinter::visit(const TInteger &) { out_ << "int"; }
+void PrettyPrinter::visit(const TFloat &) { out_ << "float"; }
+void PrettyPrinter::visit(const TBoolean &) { out_ << "bool"; }
+void PrettyPrinter::visit(const TTuple &node) { print_list(node.values); }
+void PrettyPrinter::visit(const TNamed &node) { out_ << node.name; }
 
 // ==== Expressions ====
 
-void Printer::visit(const EInteger &node) { out_ << node.value; }
-void Printer::visit(const EFloat &node) { out_ << node.value; }
-void Printer::visit(const EBool &node) {
+void PrettyPrinter::visit(const EInteger &node) { out_ << node.value; }
+void PrettyPrinter::visit(const EFloat &node) { out_ << node.value; }
+void PrettyPrinter::visit(const EBool &node) {
   out_ << (node.value ? "true" : "false");
 }
-void Printer::visit(const Var &node) { out_ << node.name; }
-void Printer::visit(const ETuple &node) { print_list(node.values); }
-void Printer::visit(const Self &) { out_ << "self"; }
+void PrettyPrinter::visit(const Var &node) { out_ << node.name; }
+void PrettyPrinter::visit(const ETuple &node) { print_list(node.values); }
+void PrettyPrinter::visit(const Self &) { out_ << "self"; }
 
-void Printer::visit(const EBinOp &node) {
+void PrettyPrinter::visit(const EBinOp &node) {
   out_ << '(';
   print_child(node.lhs.get());
   out_ << ' ' << symbol(node.op) << ' ';
@@ -124,13 +124,13 @@ void Printer::visit(const EBinOp &node) {
   out_ << ')';
 }
 
-void Printer::visit(const Not &node) {
+void PrettyPrinter::visit(const Not &node) {
   out_ << "(!";
   print_child(node.exp.get());
   out_ << ')';
 }
 
-void Printer::visit(const If &node) {
+void PrettyPrinter::visit(const If &node) {
   out_ << "(if ";
   print_child(node.cond.get());
   out_ << " then ";
@@ -140,39 +140,39 @@ void Printer::visit(const If &node) {
   out_ << ')';
 }
 
-void Printer::visit(const FieldAccess &node) {
+void PrettyPrinter::visit(const FieldAccess &node) {
   print_child(node.object.get());
   out_ << '.' << node.field;
 }
 
-void Printer::visit(const Call &node) {
+void PrettyPrinter::visit(const Call &node) {
   print_child(node.object.get());
   print_list(node.args);
 }
 
 // ==== Propositions and proofs ====
 
-void Printer::visit(const PExp &node) { print_child(node.exp.get()); }
+void PrettyPrinter::visit(const PExp &node) { print_child(node.exp.get()); }
 
-void Printer::visit(const PFollows &node) {
+void PrettyPrinter::visit(const PFollows &node) {
   print_child(node.e0.get());
   out_ << " follows " << node.property;
   print_list(node.args);
 }
 
-void Printer::visit(const Use &node) {
+void PrettyPrinter::visit(const Use &node) {
   out_ << "use " << node.name;
   print_list(node.args);
 }
 
 // ==== Functions ====
 
-void Printer::visit(const Param &node) {
+void PrettyPrinter::visit(const Param &node) {
   out_ << node.name << ": ";
   print_child(node.type.get());
 }
 
-void Printer::visit(const Function &node) {
+void PrettyPrinter::visit(const Function &node) {
   if (node.is_override) {
     out_ << "override ";
   }
@@ -207,44 +207,44 @@ void Printer::visit(const Function &node) {
 
 // ==== Members ====
 
-void Printer::visit(const SuchThat &node) {
+void PrettyPrinter::visit(const SuchThat &node) {
   out_ << "such that ";
   print_child(node.prop.get());
 }
 
-void Printer::visit(const Prove &node) {
+void PrettyPrinter::visit(const Prove &node) {
   out_ << "prove ";
   print_child(node.goal.get());
   out_ << " with proof ";
   print(node.proof);
 }
 
-void Printer::visit(const ValDecl &node) {
+void PrettyPrinter::visit(const ValDecl &node) {
   out_ << "val " << node.name << ": ";
   print_child(node.type.get());
 }
 
-void Printer::visit(const ValDef &node) {
+void PrettyPrinter::visit(const ValDef &node) {
   out_ << "val " << node.name << ": ";
   print_child(node.type.get());
   out_ << " = ";
   print_child(node.value.get());
 }
 
-void Printer::visit(const Method &node) {
+void PrettyPrinter::visit(const Method &node) {
   out_ << "method ";
   visit(node.fn);
 }
 
 // ==== Graph components ====
 
-void Printer::visit(const StateComponent &node) {
+void PrettyPrinter::visit(const StateComponent &node) {
   print_child(node.lower.get());
   out_ << " <= " << node.var << " < ";
   print_child(node.upper.get());
 }
 
-void Printer::visit(const Edge &node) {
+void PrettyPrinter::visit(const Edge &node) {
   out_ << "edge ";
   print_child(node.source.get());
   out_ << " -> ";
@@ -257,28 +257,28 @@ void Printer::visit(const Edge &node) {
 
 // ==== Declarations ====
 
-void Printer::visit(const PropertyDecl &node) {
+void PrettyPrinter::visit(const PropertyDecl &node) {
   out_ << "property " << node.name;
   print_list(node.params);
   out_ << ':';
   print_block(node.requirements);
 }
 
-void Printer::visit(const LemmaDecl &node) {
+void PrettyPrinter::visit(const LemmaDecl &node) {
   out_ << "lemma " << node.name;
   print_list(node.params);
   out_ << ':';
   print_block(node.statements);
 }
 
-void Printer::visit(const ClassDecl &node) {
+void PrettyPrinter::visit(const ClassDecl &node) {
   out_ << "class " << node.name;
   print_list(node.params);
   out_ << ':';
   print_block(node.members);
 }
 
-void Printer::visit(const GraphDecl &node) {
+void PrettyPrinter::visit(const GraphDecl &node) {
   out_ << "graph " << node.name;
   print_list(node.params);
   out_ << ':';
@@ -302,12 +302,12 @@ void Printer::visit(const GraphDecl &node) {
   indent_--;
 }
 
-void Printer::visit(const FunctionDecl &node) { visit(node.fn); }
+void PrettyPrinter::visit(const FunctionDecl &node) { visit(node.fn); }
 
 // ==== Program ====
 
 // Declarations are separated by a blank line.
-void Printer::visit(const Program &node) {
+void PrettyPrinter::visit(const Program &node) {
   for (std::size_t i = 0; i < node.decls.size(); i++) {
     if (i > 0) {
       out_ << '\n';
@@ -326,7 +326,7 @@ std::string nodle::ast::to_string(const Node &node) {
 }
 
 std::ostream &nodle::ast::operator<<(std::ostream &out, const Node &node) {
-  Printer printer(out);
+  PrettyPrinter printer(out);
   node.accept(printer);
   return out;
 }

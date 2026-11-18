@@ -597,7 +597,7 @@ auto make_program_rule() {
   return make_many1_rule<Declaration>(make_declaration_rule())
       .map<ptr<Program>>([](auto x) {
         ptr<Program> prog =
-            std::make_unique<Program>(x.back()->source_location);
+            std::make_unique<Program>(x[0]->source_location | x.back()->source_location);
         prog->decls = std::move(x);
 
         return prog;
